@@ -1,0 +1,19 @@
+#create a copy of this file, fill in the values, and then rename file as config.properties
+
+dirName=clientexplorer
+
+# Info required for acquiring AAD token
+StoreAcct=
+ClientId=
+OAuth2TokenUrl=
+ClientAppName=
+ClientRedirectUri=
+Resource=https://management.core.windows.net/
+
+# Control what unit tests are enabled
+CoreTestsEnabled=true
+SdkTestsEnabled=true
+PositionedReadsTestsEnabled=true
+acl.AclActionTestsEnabled=true
+acl.AclEntryTestsEnabled=true
+acl.AclSpecTestsEnabled=true
