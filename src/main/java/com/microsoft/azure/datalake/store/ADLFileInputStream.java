@@ -85,9 +85,9 @@ public class ADLFileInputStream extends InputStream {
         if (streamClosed) throw new IOException("attempting to read from a closed stream");
         if (position < 0) throw new IllegalArgumentException("attempting to read from negative offset");
         if (position >= directoryEntry.length) return -1;  // Hadoop prefers -1 to EOFException
-        if (b == null) throw new NullPointerException("null byte array passed in to read() method");
+        if (b == null) throw new IllegalArgumentException("null byte array passed in to read() method");
         if (offset >= b.length) throw new IllegalArgumentException("offset greater than length of array");
-        if (length > (b.length - offset))
+        if (length < 0 || length > (b.length - offset))
             throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
 
         if (log.isTraceEnabled()) {
@@ -99,10 +99,6 @@ public class ADLFileInputStream extends InputStream {
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         InputStream inStream = Core.open(filename, position, length, sessionId, client, opts, resp);
-        if (resp.httpResponseCode == 403 || resp.httpResponseCode == 416) {
-            resp.successful = true;
-            return -1; //End-of-file. This should never happen for a positioned read - we have already validated above
-        }
         if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
         if (resp.responseContentLength == 0 && !resp.responseChunked) return 0;  //Got nothing
         int bytesRead;
@@ -133,7 +129,7 @@ public class ADLFileInputStream extends InputStream {
     @Override
     public int read(byte[] b) throws IOException {
         if (b == null) {
-            throw new NullPointerException("null byte array passed in to read() method");
+            throw new IllegalArgumentException("null byte array passed in to read() method");
         }
         return read(b, 0, b.length);
     }
@@ -142,7 +138,7 @@ public class ADLFileInputStream extends InputStream {
     public int read(byte[] b, int off, int len) throws IOException {
         if (streamClosed) throw new IOException("attempting to read from a closed stream");
         if (b == null) {
-            throw new NullPointerException("null byte array passed in to read() method");
+            throw new IllegalArgumentException("null byte array passed in to read() method");
         }
 
         if (off < 0 || len < 0 || len > b.length - off) {
@@ -203,10 +199,6 @@ public class ADLFileInputStream extends InputStream {
             opts.retryPolicy = new ExponentialBackoffPolicy();
             OperationResponse resp = new OperationResponse();
             InputStream str = Core.open(filename, fCursor, blocksize, sessionId, client, opts, resp);
-            if (resp.httpResponseCode == 403 || resp.httpResponseCode == 416) {
-                resp.successful = true;
-                return -1; //End-of-file
-            }
             if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
             if (resp.responseContentLength == 0 && !resp.responseChunked) return 0;  //Got nothing
             int bytesRead;
@@ -286,8 +278,8 @@ public class ADLFileInputStream extends InputStream {
                 if (bytesRead >= 0) {  // read to EOF on the stream, so connection can be reused
                     while (str.read(junkbuffer, 0, junkbuffer.length)>=0); // read and consume rest of stream, if any remains
                 }
-            } catch (IOException ex) {
-                throw new IOException("Error reading data from response stream for file " + filename, ex);
+            } catch (Exception ex) {
+                // swallow, since we will consume however many bytes we got and then retry for the rest of the bytes
             } finally {
                 if (str!=null) str.close();
             }

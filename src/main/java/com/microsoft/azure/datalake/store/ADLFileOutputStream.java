@@ -44,14 +44,29 @@ public class ADLFileOutputStream extends OutputStream {
     ADLFileOutputStream(String filename,
                         ADLStoreClient client,
                         boolean isCreate,
-                        String leaseId) {
-        super();
+                        String leaseId) throws IOException {
         this.filename = filename;
         this.client = client;
         this.isCreate = isCreate;
         this.leaseId = (leaseId == null)? UUID.randomUUID().toString() : leaseId;
+
+        if (!isCreate) initializeAppendStream();
+
         if (log.isTraceEnabled()) {
             log.trace("ADLFIleOutputStream created for client {} for file {}, create={}", client.getClientId(), filename, isCreate);
+        }
+    }
+
+    private void initializeAppendStream() throws IOException {
+        boolean append0succeeded = doZeroLengthAppend(-1);  // do 0-length append with sync flag to update length
+        if (!append0succeeded) {
+            throw new IOException("Error doing 0-length append for append stream for file " + filename);
+        }
+        DirectoryEntry dirent = client.getDirectoryEntry(filename);
+        if (dirent != null) {
+            remoteCursor = dirent.length;
+        } else {
+            throw new IOException("Failure getting directoryEntry during append stream creation for file " + filename);
         }
     }
 
@@ -92,7 +107,8 @@ public class ADLFileOutputStream extends OutputStream {
 
         // if len > 4MB, then we force-break the write into 4MB chunks
         while (len > blocksize) {
-            flush(false); // flush first, because we want to preserve record boundary of last append
+            flush(SyncFlag.DATA); // flush first, because we want to preserve record
+            // boundary of last append
             addToBuffer(b, off, blocksize);
             off += blocksize;
             len -= blocksize;
@@ -101,7 +117,7 @@ public class ADLFileOutputStream extends OutputStream {
 
         //if adding this to buffer would overflow buffer, then flush buffer first
         if (len > buffer.length - cursor) {
-            flush(false);
+            flush(SyncFlag.DATA);
         }
         // now we know b will fit in remaining buffer, so just add it in
         addToBuffer(b, off, len);
@@ -119,24 +135,24 @@ public class ADLFileOutputStream extends OutputStream {
 
     @Override
     public void flush() throws IOException {
-        flush(true);
+        flush(SyncFlag.METADATA);
     }
 
 
-    private void flush(boolean updateMetadata) throws IOException {
-        if (log.isTraceEnabled()) {
-            log.trace("flush() with data size {} at offset {} for client {} for file {}", cursor, remoteCursor, client.getClientId(), filename);
-        }
-        // Ignoring this, because HBase actually calls flush after close() <sigh>
-        //if (streamClosed) throw new IOException("attempting to flush a closed stream for file " + filename);
-        if (cursor == 0 && (updateMetadata==false)) return;  // nothing to flush
-        if (cursor == 0 && lastFlushUpdatedMetadata) return; // do not send a flush if the last flush updated metadata and there is no data
-        if (buffer == null) buffer = new byte[blocksize];
-        if (isCreate) {
+        private void flush(SyncFlag syncFlag) throws IOException {
+            if (log.isTraceEnabled()) {
+                log.trace("flush() with data size {} at offset {} for client {} for file {}", cursor, remoteCursor, client.getClientId(), filename);
+            }
+            // Ignoring this, because HBase actually calls flush after close() <sigh>
+            if (streamClosed) return;
+            if (cursor == 0 && (syncFlag==SyncFlag.DATA)) return;  // nothing to flush
+            if (cursor == 0 && lastFlushUpdatedMetadata) return; // do not send a flush if the last flush updated metadata and there is no data
+            if (buffer == null) buffer = new byte[blocksize];
             RequestOptions opts = new RequestOptions();
             opts.retryPolicy = new ExponentialBackoffPolicy();
             OperationResponse resp = new OperationResponse();
-            Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId, leaseId, updateMetadata, client, opts, resp);
+            Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId,
+                    leaseId, syncFlag, client, opts, resp);
             if (!resp.successful) {
                 if (resp.numRetries > 0 && resp.httpResponseCode == 400 && "BadOffsetException".equals(resp.remoteExceptionName)) {
                     // if this was a retry and we get bad offset, then this might be because we got a transient
@@ -153,7 +169,7 @@ public class ADLFileOutputStream extends OutputStream {
                                 " ignoring BadOffsetException for session: " + leaseId + ", file: " + filename);
                         remoteCursor += cursor;
                         cursor = 0;
-                        lastFlushUpdatedMetadata = false; // just send flush=true next time anyway, just to be safe
+                        lastFlushUpdatedMetadata = false;
                         return;
                     } else {
                         log.debug("Append failed at expected offset(" + expectedRemoteLength +
@@ -164,25 +180,15 @@ public class ADLFileOutputStream extends OutputStream {
             }
             remoteCursor += cursor;
             cursor = 0;
-            lastFlushUpdatedMetadata = updateMetadata;
-        } else { // !isCreate - i.e., append stream
-            RequestOptions opts = new RequestOptions();
-            opts.retryPolicy = new NoRetryPolicy();
-            OperationResponse resp = new OperationResponse();
-            Core.append(filename, -1, buffer, 0, cursor, leaseId, leaseId, updateMetadata, client, opts, resp);
-            if (!resp.successful) {
-                throw client.getExceptionFromResponse(resp, "Error appending to file " + filename);
-            }
-            cursor = 0;
-            lastFlushUpdatedMetadata = updateMetadata;
+            lastFlushUpdatedMetadata = (syncFlag != SyncFlag.DATA);
         }
-    }
 
     private boolean doZeroLengthAppend(long offset) throws IOException {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.append(filename, offset, null, 0, 0, leaseId, leaseId, true, client, opts, resp);
+        Core.append(filename, offset, null, 0, 0, leaseId, leaseId, SyncFlag.METADATA,
+            client, opts, resp);
         return resp.successful;
     }
 
@@ -197,7 +203,7 @@ public class ADLFileOutputStream extends OutputStream {
         if (newSize == blocksize) return;  // nothing to do
 
         if (cursor != 0) {   // if there's data in the buffer then flush it first
-            flush(false);
+            flush(SyncFlag.DATA);
         }
         blocksize = newSize;
         buffer = null;
@@ -206,7 +212,7 @@ public class ADLFileOutputStream extends OutputStream {
     @Override
     public void close() throws IOException {
         if(streamClosed) return; // Return silently upon multiple closes
-        flush(true);
+        flush(SyncFlag.CLOSE);
         streamClosed = true;
         buffer = null;   // release byte buffer so it can be GC'ed even if app continues to hold reference to stream
         if (log.isTraceEnabled()) {

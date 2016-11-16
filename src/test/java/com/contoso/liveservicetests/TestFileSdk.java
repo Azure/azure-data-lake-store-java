@@ -390,8 +390,47 @@ public class TestFileSdk {
         assertTrue("file length should match what was written", contents.length == count);
         byte[] b3 = Arrays.copyOfRange(b2, 0, count);
         assertTrue("file contents should match", Arrays.equals(contents, b3));
-
     }
+
+    @Test
+    public void testAppendOutputStream() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        String filename = directory + "/" + "Sdk.testAppendOutputStream.txt";
+
+        byte [] contents = HelperUtils.getSampleText1();
+        OutputStream out = client.createFile(filename, IfExists.OVERWRITE);
+
+        // first, write contents with default buffer size
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(2 * 742);
+        out.write(contents);
+        bos.write(contents);
+        out.close();
+
+
+        //now open it as append stream and write more bytes to it
+        out = client.getAppendStream(filename);
+        out.write(contents);
+        bos.write(contents);
+        out.close();
+
+        bos.close();
+        byte[] b1 = bos.toByteArray();
+
+        // read file contents
+        InputStream in = client.getReadStream(filename);
+        byte[] b2 = new byte[742*4]; // double the size, to account for possible bloat due to bug in upload
+        int bytesRead;
+        int count = 0;
+        while ((bytesRead = in.read(b2, count, b2.length-count)) >=0 && count<=b2.length ) {
+            count += bytesRead;
+        }
+
+        // verify what was read is identical to what was written
+        assertTrue("file length should match what was written", b1.length == count);
+        byte[] b3 = Arrays.copyOfRange(b2, 0, count);
+        assertTrue("file contents should match", Arrays.equals(b1, b3));
+    }
+
 
     @Test(expected = ADLException.class)
     public void concatZeroFiles() throws IOException {
@@ -627,9 +666,9 @@ public class TestFileSdk {
     }
 
     @Test
-    public void renameOntoSelf() throws IOException {
+    public void renameFileOntoSelf() throws IOException {
         Assume.assumeTrue(testsEnabled);
-        String filename = directory + "/" + "Sdk.renameOntoSelf.txt";
+        String filename = directory + "/" + "Sdk.renameFileOntoSelf.txt";
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -638,8 +677,20 @@ public class TestFileSdk {
         out.close();
 
         boolean succeeded = client.rename(filename, filename);
-        assertFalse("rename should not return true", succeeded);
+        assertTrue("rename of file onto self should return true", succeeded);
     }
+
+    @Test
+    public void renameDirectoryOntoSelf() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        String dirname = directory + "/" + "Sdk.renameDirectoryOntoSelf.txt";
+
+        client.createDirectory(dirname);
+
+        boolean succeeded = client.rename(dirname, dirname);
+        assertFalse("rename of directory onto self should not return true", succeeded);
+    }
+
 
     @Test
     public void deleteNonExistentFile() throws IOException {

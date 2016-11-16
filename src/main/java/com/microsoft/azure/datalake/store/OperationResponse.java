@@ -96,7 +96,7 @@ public class OperationResponse {
     public String remoteExceptionJavaClassName = null;
 
     /**
-     * exceptions encountered when processing the resquest or response
+     * exceptions encountered when processing the request or response
      */
     public Exception ex = null;
 

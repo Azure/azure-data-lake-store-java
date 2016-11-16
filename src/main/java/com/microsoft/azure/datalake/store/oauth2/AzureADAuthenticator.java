@@ -9,6 +9,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.microsoft.azure.datalake.store.QueryParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +25,8 @@ import java.util.Date;
  */
 
 public class AzureADAuthenticator {
+
+    private static final Logger log = LoggerFactory.getLogger(AzureADAuthenticator.class.getName());
 
     /**
      * gets Azure Active Directory token using the user ID and password of a service principal (that is, Web App
@@ -51,6 +55,7 @@ public class AzureADAuthenticator {
         qp.add("grant_type","client_credentials");
         qp.add("client_id", clientId);
         qp.add("client_secret", clientSecret);
+        log.debug("AADToken: starting to fetch token using client creds for client ID " + clientId );
 
         return getTokenCall(authEndpoint, qp);
     }
@@ -73,6 +78,7 @@ public class AzureADAuthenticator {
         qp.add("grant_type", "refresh_token");
         qp.add("refresh_token", refreshToken);
         qp.add("client_id", clientId);
+        log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
 
         return getTokenCall(authEndpoint, qp);
     }
@@ -104,6 +110,7 @@ public class AzureADAuthenticator {
         qp.add("scope", "openid");
         qp.add("username",username);
         qp.add("password",password);
+        log.debug("AADToken: starting to fetch token using username for user " + username );
 
         return getTokenCall(authEndpoint, qp);
     }
@@ -145,10 +152,15 @@ public class AzureADAuthenticator {
                 long expiry = System.currentTimeMillis();
                 expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
                 token.expiry = new Date(expiry);
+                log.debug("AADToken: fetched token with expiry " + token.expiry.toString());
+            } catch (Exception ex) {
+                log.debug("AADToken: got exception when parsing json token " + ex.toString());
+                throw ex;
             } finally {
                 httpResponseStream.close();
             }
         } else {
+            log.debug("AADToken: HTTP connection failed for getting token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
             throw new IOException("Failed to acquire token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
         }
         return token;

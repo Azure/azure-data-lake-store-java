@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 class HttpTransport {
 
-    private static final String API_VERSION = "2015-10-01-preview"; // API version used in REST requests
+    private static final String API_VERSION = "2016-11-01"; // API version used in REST requests
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport");
     private static final Logger tokenlog = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport.tokens");
 
@@ -134,11 +134,6 @@ class HttpTransport {
         if (resp.ex != null) return false;
         if (!resp.successful) return false;
         if (resp.httpResponseCode >=100 && resp.httpResponseCode < 300) return true; // 1xx and 2xx return codes
-        if  (    (op == Operation.OPEN)
-              && (resp.httpResponseCode == 403 || resp.httpResponseCode == 416)      // EOF for OPEN
-            ) {
-            return true;
-        }
         return false;         //anything else
     }
 
@@ -215,11 +210,11 @@ class HttpTransport {
                     offsetWithinContentsArray + length < 0 || // integer overflow
                     offsetWithinContentsArray >= requestBody.length ||
                     offsetWithinContentsArray + length > requestBody.length) {
-                throw new IndexOutOfBoundsException();
+                throw new IndexOutOfBoundsException("offset+length overflows byte buffer for path " + path);
             }
         } else {
             if (offsetWithinContentsArray != 0 || length != 0) {
-                throw new IndexOutOfBoundsException();
+                throw new IndexOutOfBoundsException("Non-zero offset or length with null body for path " + path);
             }
         }
 

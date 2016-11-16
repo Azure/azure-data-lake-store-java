@@ -38,7 +38,10 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
 
         // Non-retryable error
-        if (      (httpResponseCode >= 300 && httpResponseCode < 500 && httpResponseCode != 408 && httpResponseCode != 429)
+        if (      (httpResponseCode >= 300 && httpResponseCode < 500   // 3xx and 4xx, except specific ones below
+                                           && httpResponseCode != 408
+                                           && httpResponseCode != 429
+                                           && httpResponseCode != 401)
                || (httpResponseCode == 501) // Not Implemented
                || (httpResponseCode == 505) // Version Not Supported
                ) {
@@ -46,7 +49,10 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
         }
 
         // Retryable error, retry with exponential backoff
-        if ( lastException!=null || httpResponseCode >=500 || httpResponseCode == 429 || httpResponseCode == 408) {
+        if ( lastException!=null || httpResponseCode >=500    // exception or 5xx, + specific ones below
+                                 || httpResponseCode == 408
+                                 || httpResponseCode == 429
+                                 || httpResponseCode == 401) {
             if (retryCount < maxRetries) {
                 wait(exponentialRetryInterval);
                 exponentialRetryInterval *= exponentialFactor;

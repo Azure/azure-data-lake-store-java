@@ -248,11 +248,11 @@ public class ADLStoreClient {
         }
         String leaseId = UUID.randomUUID().toString();
         boolean overwrite = (mode==IfExists.OVERWRITE);
-        boolean releaseServerHandle = false;
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId, leaseId, createParent, releaseServerHandle, this, opts, resp);
+        Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
+            leaseId, createParent, SyncFlag.DATA, this, opts, resp);
         if (!resp.successful) {
             throw this.getExceptionFromResponse(resp, "Error creating file " + path);
         }
@@ -288,11 +288,11 @@ public class ADLStoreClient {
      */
     public ADLFileOutputStream getAppendStream(String path) throws IOException {
         String leaseId = UUID.randomUUID().toString();
-        boolean releaseServerHandle = false;
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.append(path, -1, null, 0, 0, leaseId, leaseId, releaseServerHandle, this, opts, resp);
+        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, opts,
+            resp);
         if (!resp.successful) {
             throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
         }
@@ -481,19 +481,14 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public boolean deleteRecursive(String path) throws IOException {
+        if (path.equals("/")) throw new IllegalArgumentException("Cannot delete root directory tree");
+
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         boolean succeeded = Core.delete(path, true, this, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error deleting directory tree " + path);
-        }
-        boolean pathPrefixSet;
-        synchronized (this) {
-            pathPrefixSet = (pathPrefix!=null);
-        }
-        if (pathPrefixSet && path.equals("/")) {  // root directory must exist
-            this.createDirectory("/");
         }
 
         return succeeded;
@@ -551,7 +546,14 @@ public class ADLStoreClient {
      */
     public boolean rename(String path, String newName, boolean overwrite) throws IOException {
         if (path==null || path.equals("")) throw new IllegalArgumentException("Path cannot be null or empty");
-        if (path.equals("/")) throw new IllegalArgumentException("cannot rename root directory");
+        if (path.equals("/")) throw new IllegalArgumentException("Cannot rename root directory");
+
+        // In case of self rename operation, HDFS semantics expects true if file, false if directory.
+        // Renaming self is not a common operation. but more obvious to contract test validation.
+        if(path.equals(newName)) {
+            return getDirectoryEntry(path).type == DirectoryEntryType.FILE;
+        }
+
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
@@ -570,6 +572,8 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public boolean delete(String path) throws IOException {
+        if (path.equals("/")) throw new IllegalArgumentException("Cannot delete root directory");
+
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
@@ -577,13 +581,7 @@ public class ADLStoreClient {
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error deleting directory " + path);
         }
-        boolean pathPrefixSet;
-        synchronized (this) {
-            pathPrefixSet = (pathPrefix!=null);
-        }
-        if (pathPrefixSet && path.equals("/")) {
-            this.createDirectory("/");
-        }
+
         return succeeded;
     }
 
@@ -972,9 +970,6 @@ public class ADLStoreClient {
         } catch (URISyntaxException ex) {
             throw new IllegalArgumentException("Invalid path prefix: " + prefix);
         }
-
-        // create root directory if it doesn't exist
-        this.createDirectory("/");
     }
 
 

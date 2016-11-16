@@ -17,7 +17,26 @@ package com.microsoft.azure.datalake.store.retrypolicies;
  */
 public class NoRetryPolicy implements RetryPolicy {
 
+    private int retryCount = 0;
+    private int waitInterval = 100;
+
+
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
+        if (httpResponseCode == 401 && retryCount == 0) {
+            // to mitigate a special problem with intermittent 401's on calls
+            wait(waitInterval);
+            retryCount++;
+            return true;
+        }
         return false;
     }
+
+    private void wait(int milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();   // http://www.ibm.com/developerworks/library/j-jtp05236/
+        }
+    }
+
 }

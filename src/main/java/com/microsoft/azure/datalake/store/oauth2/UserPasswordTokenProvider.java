@@ -28,7 +28,7 @@ public class UserPasswordTokenProvider extends AccessTokenProvider {
 
     @Override
     protected AzureADToken refreshToken() throws IOException {
-        log.debug("refreshing user-password based token");
+        log.debug("AADToken: refreshing user-password based token");
         return AzureADAuthenticator.getTokenUsingClientCreds(clientId, username, password);
     }
 }

@@ -9,6 +9,7 @@ package com.contoso.liveservicetests;
 import com.contoso.helpers.HelperUtils;
 import com.microsoft.azure.datalake.store.ADLException;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
+import com.microsoft.azure.datalake.store.SyncFlag;
 import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
 import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
 import com.microsoft.azure.datalake.store.Core;
@@ -146,7 +147,8 @@ public class TestCore {
     private void putFileContents(String filename, byte[] b, boolean overwrite) throws IOException {
         RequestOptions opts = new RequestOptions();
         OperationResponse resp = new OperationResponse();
-        Core.create(filename, overwrite, null, b, 0, b.length, null, null, true, true, client, opts, resp);
+        Core.create(filename, overwrite, null, b, 0, b.length, null, null,
+            true, SyncFlag.CLOSE, client, opts, resp);
         if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error creating file " + filename);
     }
 
