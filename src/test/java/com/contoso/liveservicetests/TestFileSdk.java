@@ -49,6 +49,7 @@ public class TestFileSdk {
     public void createDirectory() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.createDirectory/a/b/c";
+        System.out.println("Running createDirectory");
 
         client.createDirectory(filename);
     }
@@ -57,6 +58,7 @@ public class TestFileSdk {
     public void createEmptyFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.createEmptyFile.txt";
+        System.out.println("Running createEmptyFile");
 
         // write some text to file
         OutputStream out = client.createFile(filename, IfExists.OVERWRITE);
@@ -80,6 +82,7 @@ public class TestFileSdk {
     public void smallFileNoOverwrite() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.smallFileNoOverwrite.txt";
+        System.out.println("Running smallFileNoOverwrite");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -105,6 +108,7 @@ public class TestFileSdk {
     @Test
     public void smallFileWithUnicodeCharacters() throws IOException {
         Assume.assumeTrue(testsEnabled);
+        System.out.println("Running smallFileWithUnicodeCharacters");
 
         // Contains language names in that language
         // non-AlphaNum-chars.Traditional-Chinese.Simplified-Chinese.Hebrew.Hindi.Spanish
@@ -151,6 +155,7 @@ public class TestFileSdk {
     public void existingFileNoOverwrite() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.existingFileNoOverwrite.txt";
+        System.out.println("Running existingFileNoOverwrite");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -169,6 +174,7 @@ public class TestFileSdk {
     public void smallFileWithOverwrite() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.smallFileWithOverwrite.txt";
+        System.out.println("Running smallFileWithOverwrite");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -201,6 +207,7 @@ public class TestFileSdk {
     public void nonExistingFileWithOverwrite() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.nonExistingFileWithOverwrite.txt";
+        System.out.println("Running nonExistingFileWithOverwrite");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -227,6 +234,7 @@ public class TestFileSdk {
     public void large11MBWrite() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.large11MBWrite.txt";
+        System.out.println("Running large11MBWrite");
 
         // write some text to file
         byte [] contents = HelperUtils.getRandomBuffer(11 * 1024 * 1024);
@@ -253,6 +261,7 @@ public class TestFileSdk {
     public void multiple4Mbwrites() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.multiple4Mbwrites.txt";
+        System.out.println("Running multiple4Mbwrites");
 
         // do three 4mb writes
         byte [] contents = HelperUtils.getRandom4mbBuffer();
@@ -285,6 +294,7 @@ public class TestFileSdk {
     public void createFileAndDoManySmallWrites() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.CreateFileAndDoManySmallWrites.txt";
+        System.out.println("Running createFileAndDoManySmallWrites");
 
         // write a small text many times to file, creating a large file (multiple 4MB chunks + partial chunk)
         byte [] contents = HelperUtils.getSampleText1();
@@ -317,6 +327,7 @@ public class TestFileSdk {
     public void writeFilewithSmallBuffer() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.writeFilewithSmallBuffer.txt";
+        System.out.println("Running writeFilewithSmallBuffer");
 
         // write a small text many times to file, creating a large file (multiple 4MB chunks + partial chunk)
         byte [] contents = HelperUtils.getSampleText1();
@@ -358,6 +369,7 @@ public class TestFileSdk {
     public void testAppendNonexistentFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.testAppendNonexistentFile.txt";
+        System.out.println("Running testAppendNonexistentFile");
 
         OutputStream out = client.getAppendStream(filename);
         out.close();
@@ -367,6 +379,7 @@ public class TestFileSdk {
     public void testAppendEmptyFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.testAppendEmptyFile.txt";
+        System.out.println("Running testAppendEmptyFile");
 
         // create empty file
         client.createEmptyFile(filename);
@@ -396,6 +409,7 @@ public class TestFileSdk {
     public void testAppendOutputStream() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.testAppendOutputStream.txt";
+        System.out.println("Running testAppendOutputStream");
 
         byte [] contents = HelperUtils.getSampleText1();
         OutputStream out = client.createFile(filename, IfExists.OVERWRITE);
@@ -436,6 +450,7 @@ public class TestFileSdk {
     public void concatZeroFiles() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.concatZeroFiles-c.txt";
+        System.out.println("Running concatZeroFiles");
 
         // concatenate single file
         List<String> flist = new ArrayList<String>(1);
@@ -447,6 +462,7 @@ public class TestFileSdk {
         Assume.assumeTrue(testsEnabled);
         String fn1 = directory + "/" + "Sdk.concatSingleFile.txt";
         String fn2 = directory + "/" + "Sdk.concatSingleFile-c.txt";
+        System.out.println("Running concatSingleFile");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -477,6 +493,7 @@ public class TestFileSdk {
     public void concatSingleFileOntoItself() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.concatSingleFileOntoItself.txt";
+        System.out.println("Running concatSingleFileOntoItself");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -496,6 +513,7 @@ public class TestFileSdk {
         String fn1 = directory + "/" + "Sdk.concatTwoFiles-1.txt";
         String fn2 = directory + "/" + "Sdk.concatTwoFiles-2.txt";
         String fnc = directory + "/" + "Sdk.concatTwoFiles-c.txt";
+        System.out.println("Running concatTwoFiles");
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(4096);
 
@@ -541,6 +559,7 @@ public class TestFileSdk {
         String fn1 = directory + "/" + "Sdk.concatWithSourceFileRepeated-1.txt";
         String fn2 = directory + "/" + "Sdk.concatWithSourceFileRepeated-2.txt";
         String fnc = directory + "/" + "Sdk.concatWithSourceFileRepeated-c.txt";
+        System.out.println("Running concatWithSourceFileRepeated");
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(4096);
 
@@ -580,6 +599,7 @@ public class TestFileSdk {
         String fn2 = directory + "/" + "Sdk.concatThreeFiles-2.txt";
         String fn3 = directory + "/" + "Sdk.concatThreeFiles-3.txt";
         String fnc = directory + "/" + "Sdk.concatThreeFiles-c.txt";
+        System.out.println("Running concatThreeFiles");
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(4096);
 
@@ -629,6 +649,7 @@ public class TestFileSdk {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.renameFile.txt";
         String fnr = directory + "/" + "Sdk.renameFile-r.txt";
+        System.out.println("Running renameFile");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -660,6 +681,7 @@ public class TestFileSdk {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.renameNonExistentFile.txt";
         String fnr = directory + "/" + "Sdk.renameNonExistentFile-r.txt";
+        System.out.println("Running renameNonExistentFile");
 
         boolean succeeded = client.rename(filename, fnr);
         assertFalse("rename of non-existent file should return false", succeeded);
@@ -669,6 +691,7 @@ public class TestFileSdk {
     public void renameFileOntoSelf() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.renameFileOntoSelf.txt";
+        System.out.println("Running renameFileOntoSelf");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -684,6 +707,7 @@ public class TestFileSdk {
     public void renameDirectoryOntoSelf() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String dirname = directory + "/" + "Sdk.renameDirectoryOntoSelf.txt";
+        System.out.println("Running renameDirectoryOntoSelf");
 
         client.createDirectory(dirname);
 
@@ -696,6 +720,7 @@ public class TestFileSdk {
     public void deleteNonExistentFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.deleteNonExistentFile.txt";
+        System.out.println("Running deleteNonExistentFile");
 
         boolean succeeded = client.delete(filename);
         assertFalse("delete() should not return true on a non-existent file", succeeded);
@@ -705,6 +730,7 @@ public class TestFileSdk {
     public void deleteFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.deleteFile.txt";
+        System.out.println("Running deleteFile");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -720,6 +746,7 @@ public class TestFileSdk {
     public void getDirectoryEntryforFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Sdk.getDirectoryEntryforFile.txt";
+        System.out.println("Running getDirectoryEntryforFile");
 
         DirectoryEntry d;
 
@@ -745,6 +772,8 @@ public class TestFileSdk {
         assertTrue("group should not be missing", d.group!=null && !d.group.trim().equals(""));
         assertTrue("blocksize should always be 256MB from server", d.blocksize == 256*1024*1024);
         assertTrue("replicartion factor size should always be 1 from server", d.replicationFactor == 1);
+        assertTrue("expiry time should be null", d.expiryTime == null);
+        assertTrue("aclBit should be true in unsupported environment", d.aclBit == true);
 
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.HOUR_OF_DAY, -1);
@@ -760,6 +789,7 @@ public class TestFileSdk {
     public void getDirectoryEntryforDirectory() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String dirname = directory + "/" + "getDirectoryEntryforDirectory/a/b/c";
+        System.out.println("Running getDirectoryEntryforDirectory");
 
         boolean succeeded = client.createDirectory(dirname);
         assertTrue("Directory creation shoul dnot fail", succeeded);
@@ -773,6 +803,8 @@ public class TestFileSdk {
         assertTrue("group should not be missing", de.group!=null && !de.group.trim().equals(""));
         assertTrue("blocksize should always be 0 for directory. Got " + de.blocksize, de.blocksize == 0);
         assertTrue("replication factor size should always be 0 for directory. Got " + de.replicationFactor, de.replicationFactor == 0);
+        assertTrue("expiry time should be null for directory", de.expiryTime == null);
+        assertTrue("aclBit should be false for this directory in unsupported environment", de.aclBit == true);
 
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.HOUR_OF_DAY, -1);
@@ -788,18 +820,13 @@ public class TestFileSdk {
     public void deleteDirectoryRecursive() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String dirname = directory + "/" + "deleteDirectoryRecursive";
+        System.out.println("Running deleteDirectoryRecursive");
 
         String fn1 = dirname + "/a/b/c/f1.txt";
-        byte [] contents = HelperUtils.getSampleText1();
-        OutputStream out = client.createFile(fn1, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.createEmptyFile(client, fn1);
 
         String fn2 = dirname + "/a/b/f2.txt";
-        contents = HelperUtils.getSampleText2();
-        out = client.createFile(fn2, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.create256BFile(client, fn2);
 
         String parentDir = dirname + "/a";
         boolean succeeded = client.deleteRecursive(parentDir);
@@ -817,18 +844,13 @@ public class TestFileSdk {
     public void deleteDirNonRecursiveNonEmpty() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String dirname = directory + "/" + "deleteDirNonRecursiveNonEmpty";
+        System.out.println("Running deleteDirNonRecursiveNonEmpty");
 
         String fn1 = dirname + "/a/b/c/f1.txt";
-        byte[] contents = HelperUtils.getSampleText1();
-        OutputStream out = client.createFile(fn1, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.createEmptyFile(client, fn1);
 
         String fn2 = dirname + "/a/b/f2.txt";
-        contents = HelperUtils.getSampleText2();
-        out = client.createFile(fn2, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.create256BFile(client, fn2);
 
         String parentDir = dirname + "/a";
         client.delete(parentDir);
@@ -839,27 +861,130 @@ public class TestFileSdk {
     public void deleteDirectoryNonRecursive() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String dirname = directory + "/" + "deleteDirectoryNonRecursive";
+        System.out.println("Running deleteDirectoryNonRecursive");
 
         String fn1 = dirname + "/a/b/c/f1.txt";
-        byte [] contents = HelperUtils.getSampleText1();
-        OutputStream out = client.createFile(fn1, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.createEmptyFile(client, fn1);
 
         String fn2 = dirname + "/a/b/f2.txt";
-        contents = HelperUtils.getSampleText2();
-        out = client.createFile(fn2, IfExists.OVERWRITE);
-        out.write(contents);
-        out.close();
+        HelperUtils.create256BFile(client, fn2);
 
         String parentDir = dirname + "/a";
         client.delete(parentDir);
     }
 
     @Test
+    public void enumerateDirectory() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        Assume.assumeTrue(false);  // disable test for now; this is very long-running
+        String dirname = directory + "/" + "enumerateDirectory";
+        System.out.println("Running enumerateDirectory");
+
+
+        List<DirectoryEntry> list;
+
+        // non-existent directory
+        try {
+            list = client.enumerateDirectory(dirname);
+            fail ("enumerateDirectory() on non-existent directory should throw");
+        } catch (ADLException ex) {
+            // expected
+        }
+
+        // empty directory
+        client.createDirectory(dirname);
+        list = client.enumerateDirectory(dirname);
+        assertTrue("empty directory should return 0 entries", list.size() == 0);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("empty directory should return 0 entries even with listsize", list.size() == 0);
+
+
+        // directory with single file
+        String fn = dirname + "/f0001.txt";
+        HelperUtils.createEmptyFile(client, fn);
+        list = client.enumerateDirectory(dirname);
+        assertTrue("directory should have 1 entry", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("directory should return 1 entry with listsize 1", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 2);
+        assertTrue("directory should return 1 entry with listsize 2", list.size() == 1);
+
+
+        // directory with 2 files
+        fn = dirname + "/f0002.txt";
+        HelperUtils.create256BFile(client, fn);
+        list = client.enumerateDirectory(dirname);
+        assertTrue("directory should have 2 entries", list.size() == 2);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("directory of 2 should return 1 entry with listsize 1", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 2);
+        assertTrue("directory of 2 should return 2 entries with listsize 2", list.size() == 2);
+        list = client.enumerateDirectory(dirname, "f0001.txt");
+        assertTrue("directory of 2 should return 1 entry with startAfter", list.size() == 1);
+
+        // 1000-file directory
+        for (int i = 3; i<=1000; i++) {
+            fn = dirname + "/f" + String.format("%04d", i);
+            HelperUtils.createEmptyFile(client, fn);
+        }
+        list = client.enumerateDirectory(dirname);
+        assertTrue("directory of 1000 should return 1000 entries", list.size() == 1000);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("directory of 1000 should return 1 entry with listsize 1", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 2);
+        assertTrue("directory of 1000 should return 2 entries with listsize 2", list.size() == 2);
+        list = client.enumerateDirectory(dirname, 1000);
+        assertTrue("directory of 1000 should return 1000 entries with listsize 1000", list.size() == 1000);
+        list = client.enumerateDirectory(dirname, 2000);
+        assertTrue("directory of 1000 should return 1000 entries with listsize 2000", list.size() == 1000);
+        list = client.enumerateDirectory(dirname, "f0500.txt");
+        assertTrue("directory of 1000 should return 500 entries with startAfter f0500", list.size() == 500);
+
+        // 4000-file directory
+        for (int i = 1001; i<=4000; i++) {
+            fn = dirname + "/f" + String.format("%04d", i);
+            HelperUtils.createEmptyFile(client, fn);
+        }
+        list = client.enumerateDirectory(dirname);
+        assertTrue("directory of 4000 should return 4000 entries", list.size() == 4000);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("directory of 4000 should return 1 entry with listsize 1", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 2);
+        assertTrue("directory of 4000 should return 2 entries with listsize 2", list.size() == 2);
+        list = client.enumerateDirectory(dirname, 4000);
+        assertTrue("directory of 4000 should return 4000 entries with listsize 4000", list.size() == 4000);
+        list = client.enumerateDirectory(dirname, 4001);
+        assertTrue("directory of 4000 should return 4000 entries with listsize 4001", list.size() == 4000);
+        list = client.enumerateDirectory(dirname, "f0500.txt");
+        assertTrue("directory of 1000 should return 3500 entries with startAfter f0500", list.size() == 3500);
+
+        // 4001 files
+        fn = dirname + "/f4001.txt";
+        HelperUtils.create256BFile(client, fn);
+        list = client.enumerateDirectory(dirname);
+        assertTrue("directory of 4001 should return 4001 entries", list.size() == 4001);
+        list = client.enumerateDirectory(dirname, 1);
+        assertTrue("directory of 4001 should return 1 entry with listsize 1", list.size() == 1);
+        list = client.enumerateDirectory(dirname, 2);
+        assertTrue("directory of 4001 should return 2 entries with listsize 2", list.size() == 2);
+        list = client.enumerateDirectory(dirname, 4000);
+        assertTrue("directory of 4001 should return 4000 entries with listsize 4000", list.size() == 4000);
+        list = client.enumerateDirectory(dirname, 4001);
+        assertTrue("directory of 4001 should return 4001 entries with listsize 4001", list.size() == 4001);
+        list = client.enumerateDirectory(dirname, 4002);
+        assertTrue("directory of 4001 should return 4001 entries with listsize 4002", list.size() == 4001);
+        list = client.enumerateDirectory(dirname, 12000);
+        assertTrue("directory of 4001 should return 4001 entries with listsize 12000", list.size() == 4001);
+        list = client.enumerateDirectory(dirname, "f0500.txt");
+        assertTrue("directory of 1000 should return 3501 entries with startAfter f0500", list.size() == 3501);
+    }
+
+
+    @Test
     public void contentSummaryForFile() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "contentSummaryForFile.txt";
+        System.out.println("Running contentSummaryForFile");
 
         // write some text to file
         byte [] contents = HelperUtils.getSampleText1();
@@ -881,6 +1006,7 @@ public class TestFileSdk {
         String fn1 = dirname + "/" + "a.txt";
         String fn2 = dirname + "/" + "b.txt";
         String dn2 = dirname + "/" + "foo";
+        System.out.println("Running contentSummaryForDirectory");
 
         // create a subdirectory
         client.createDirectory(dn2);
@@ -909,6 +1035,8 @@ public class TestFileSdk {
     public void pathPrefix() throws IOException, URISyntaxException {
         Assume.assumeTrue(testsEnabled);
         String prefix = directory + "/" + "pathPrefix";
+        System.out.println("Running pathPrefix");
+
         client.setOptions(new ADLStoreOptions().setFilePathPrefix(prefix));
 
         // Do a series of operations on the prefix-enabled client and

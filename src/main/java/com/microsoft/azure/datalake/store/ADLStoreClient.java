@@ -18,13 +18,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Date;
-import java.util.List;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -292,7 +290,7 @@ public class ADLStoreClient {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, opts,
-            resp);
+                resp);
         if (!resp.successful) {
             throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
         }
@@ -321,6 +319,24 @@ public class ADLStoreClient {
         return true;
     }
 
+    /**
+     * Sets the expiry time on a file.
+     *
+     * @param path path of the file to set expiry on
+     * @param expiryOption {@link ExpiryOption} value specifying how to interpret the passed in time
+     * @param expiryTimeMilliseconds time duration in milliseconds
+     * @throws IOException if there is an error in setting file expiry
+     */
+    public void setExpiryTime(String path, ExpiryOption expiryOption, long expiryTimeMilliseconds) throws IOException {
+        RequestOptions opts = new RequestOptions();
+        opts.retryPolicy = new ExponentialBackoffPolicy();
+        OperationResponse resp = new OperationResponse();
+        Core.setExpiryTime(path, expiryOption, expiryTimeMilliseconds, this, opts, resp);
+        if (!resp.successful) {
+            throw getExceptionFromResponse(resp, "Error concatenating files into " + path);
+        }
+    }
+
     /*
     *
     * Methods that apply to Directories only
@@ -335,10 +351,23 @@ public class ADLStoreClient {
      * @return {@link List}&lt;{@link DirectoryEntry}&gt; containing the contents of the directory
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
-    public List<DirectoryEntry> enumerateDirectory(String path) throws IOException  {
-        return enumerateDirectory(path, 0, null, null);
+    public List<DirectoryEntry> enumerateDirectory(String path) throws IOException {
+        return enumerateDirectory(path, (UserGroupRepresentation) null);
     }
 
+    /**
+     * Enumerates the contents of a directory, returning a {@link List} of {@link DirectoryEntry} objects,
+     * one per file or directory in the specified directory.
+     *
+     * @param path full pathname of directory to enumerate
+     * @param oidOrUpn {@link UserGroupRepresentation} enum specifying whether to return user and group information as
+     *                                                OID or UPN
+     * @return {@link List}&lt;{@link DirectoryEntry}&gt; containing the contents of the directory
+     * @throws IOException {@link ADLException} is thrown if there is an error
+     */
+    public List<DirectoryEntry> enumerateDirectory(String path, UserGroupRepresentation oidOrUpn) throws IOException  {
+        return enumerateDirectory(path, Integer.MAX_VALUE, null, null, oidOrUpn);
+    }
 
     /**
      * Enumerates the contents of a directory, returning a {@link List} of {@link DirectoryEntry} objects,
@@ -373,7 +402,7 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public List<DirectoryEntry> enumerateDirectory(String path, String startAfter) throws IOException  {
-        return enumerateDirectory(path, 0, startAfter, null);
+        return enumerateDirectory(path, Integer.MAX_VALUE, startAfter, null);
     }
 
     /**
@@ -412,7 +441,7 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public List<DirectoryEntry> enumerateDirectory(String path, String startAfter, String endBefore) throws IOException  {
-        return enumerateDirectory(path, 0, startAfter, endBefore);
+        return enumerateDirectory(path, Integer.MAX_VALUE, startAfter, endBefore);
     }
 
     /**
@@ -432,11 +461,69 @@ public class ADLStoreClient {
      * @return {@link List}&lt;{@link DirectoryEntry}&gt; containing the contents of the directory
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
-    public List<DirectoryEntry> enumerateDirectory(String path, int maxEntriesToRetrieve, String startAfter, String endBefore) throws IOException {
+    public List<DirectoryEntry> enumerateDirectory(String path,
+                                                   int maxEntriesToRetrieve,
+                                                   String startAfter,
+                                                   String endBefore)
+            throws IOException {
+        return enumerateDirectory(path, maxEntriesToRetrieve, startAfter, endBefore, null);
+    }
+
+    /**
+     * Enumerates the contents of a directory, returning a {@link List} of {@link DirectoryEntry} objects,
+     * one per file or directory in the specified directory.
+     * <P>
+     * To avoid overwhelming the client or the server, the call may return a partial list, in which case
+     * the caller should make the call again with the last entry from the returned list specified as the
+     * {@code startAfter} parameter of the next call.
+     * </P>
+     *
+     * @param path full pathname of directory to enumerate
+     * @param maxEntriesToRetrieve maximum number of entries to retrieve. Note that server can limit the
+     *                             number of entries retrieved to a number smaller than the number specified.
+     * @param startAfter the filename after which to begin enumeration
+     * @param endBefore the filename before which to end the enumeration
+     * @param oidOrUpn {@link UserGroupRepresentation} enum specifying whether to return user and group information as
+     *                                                OID or UPN
+     * @return {@link List}&lt;{@link DirectoryEntry}&gt; containing the contents of the directory
+     * @throws IOException {@link ADLException} is thrown if there is an error
+     */
+    public List<DirectoryEntry> enumerateDirectory(String path,
+                                                   int maxEntriesToRetrieve,
+                                                   String startAfter,
+                                                   String endBefore,
+                                                   UserGroupRepresentation oidOrUpn)
+            throws IOException {
+        ArrayList<DirectoryEntry> deList = new ArrayList<DirectoryEntry>();
+        int pagesize = 4000;
+        int numEntriesToRequest;
+        ArrayList<DirectoryEntry> list;
+        boolean eol = (maxEntriesToRetrieve <= 0); // eol=end-of-list
+
+        while (!eol) {
+            numEntriesToRequest = Math.min(maxEntriesToRetrieve, pagesize);
+            list = (ArrayList<DirectoryEntry>) enumerateDirectoryInternal(path, numEntriesToRequest,
+                    startAfter, endBefore, oidOrUpn);
+            if (list == null || list.size() == 0) break; // return what we have so far
+            int size = list.size();
+            deList.addAll(list);
+            startAfter = list.get(size-1).name;
+            maxEntriesToRetrieve -= size;
+            eol = (maxEntriesToRetrieve <= 0) || (size < numEntriesToRequest);
+        }
+        return deList;
+    }
+
+    private List<DirectoryEntry> enumerateDirectoryInternal(String path,
+                                                            int maxEntriesToRetrieve,
+                                                            String startAfter,
+                                                            String endBefore,
+                                                            UserGroupRepresentation oidOrUpn)
+            throws IOException {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        List<DirectoryEntry> dirEnt  = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, this, opts, resp);
+        List<DirectoryEntry> dirEnt  = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error enumerating directory " + path);
         }
@@ -593,16 +680,28 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public DirectoryEntry getDirectoryEntry(String path) throws IOException {
+        return getDirectoryEntry(path, null);
+    }
+
+    /**
+     * Gets the directory metadata about this file or directory.
+     *
+     * @param path full pathname of file or directory to get directory entry for
+     * @param oidOrUpn {@link UserGroupRepresentation} enum specifying whether to return user and group information as
+     *                                                OID or UPN
+     * @return {@link DirectoryEntry} containing the metadata for the file/directory
+     * @throws IOException {@link ADLException} is thrown if there is an error
+     */
+    public DirectoryEntry getDirectoryEntry(String path, UserGroupRepresentation oidOrUpn) throws IOException {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        DirectoryEntry dirEnt  = Core.getFileStatus(path, this, opts, resp);
+        DirectoryEntry dirEnt  = Core.getFileStatus(path, oidOrUpn, this, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error getting info for file " + path);
         }
         return dirEnt;
     }
-
 
     /**
      * Gets the content summary of a file or directory.
@@ -817,12 +916,27 @@ public class ADLStoreClient {
      * @return {@link AclStatus} object containing the ACL and permission info
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
-    public AclStatus getAclStatus(String path) throws IOException {
+    public AclStatus getAclStatus(String path)
+            throws IOException {
+        return getAclStatus(path, null);
+    }
+
+    /**
+     * Queries the ACLs and permissions for a file or directory.
+     *
+     * @param path full pathname of file or directory to query
+     * @param oidOrUpn {@link UserGroupRepresentation} enum specifying whether to return user and group information as
+     *                                                OID or UPN
+     * @return {@link AclStatus} object containing the ACL and permission info
+     * @throws IOException {@link ADLException} is thrown if there is an error
+     */
+    public AclStatus getAclStatus(String path, UserGroupRepresentation oidOrUpn)
+            throws IOException {
         AclStatus status = null;
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        status = Core.getAclStatus(path, this, opts, resp);
+        status = Core.getAclStatus(path, oidOrUpn, this, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error getting  ACL Status for " + path);
         }

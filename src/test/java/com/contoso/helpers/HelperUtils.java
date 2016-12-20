@@ -7,12 +7,14 @@
 package com.contoso.helpers;
 
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import com.microsoft.azure.datalake.store.*;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
+
+import java.io.*;
 import java.security.SecureRandom;
 import java.util.Properties;
+import java.util.UUID;
 
 public class HelperUtils {
 
@@ -47,6 +49,27 @@ public class HelperUtils {
         byte[] b = new byte[len];
         prng.nextBytes(b);
         return b;
+    }
+
+    public static void createEmptyFile(ADLStoreClient client, String filename) throws IOException {
+        RequestOptions opts = new RequestOptions();
+        opts.retryPolicy = new ExponentialBackoffPolicy();
+        OperationResponse resp = new OperationResponse();
+        Core.create(filename, true, null, null, 0, 0, null,
+                null, true, SyncFlag.CLOSE, client, opts, resp);
+        if (!resp.successful) {
+            throw client.getExceptionFromResponse(resp, "Error creating file " + filename);
+        }
+    }
+
+    public static void createRandomContentFile(ADLStoreClient client, String filename, int contentLength) throws IOException {
+        OutputStream ostr = client.createFile(filename, IfExists.OVERWRITE);
+        ostr.write(getRandomBuffer(contentLength));
+        ostr.close();
+    }
+
+    public static void create256BFile(ADLStoreClient client, String filename) throws IOException {
+        createRandomContentFile(client, filename, 256);
     }
 
     public static byte[] getSampleText1() {

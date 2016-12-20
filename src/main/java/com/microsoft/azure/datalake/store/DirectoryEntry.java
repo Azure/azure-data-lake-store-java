@@ -69,6 +69,17 @@ public class DirectoryEntry {
      */
     public final int replicationFactor;
 
+    /**
+     * boolean indicating whether file has ACLs set on it.
+     */
+    public final boolean aclBit;
+
+    /**
+     * Date+time at which the file expires, as UTC time. It is null if the file has no expiry. It is null for
+     * directories.
+     */
+    public final Date expiryTime;
+
 
     /**
      * the unix-style permission string for this file or directory
@@ -85,7 +96,9 @@ public class DirectoryEntry {
                    DirectoryEntryType type,
                    long blocksize,
                    int replicationFactor,
-                   String permission) {
+                   String permission,
+                   boolean aclBit,
+                   Date expiryTime) {
         this.name = name;
         this.fullName = fullName;
         this.length = length;
@@ -97,6 +110,8 @@ public class DirectoryEntry {
         this.permission = permission;
         this.blocksize = blocksize;
         this.replicationFactor = replicationFactor;
+        this.aclBit = aclBit;
+        this.expiryTime = expiryTime;
     }
 }
 
