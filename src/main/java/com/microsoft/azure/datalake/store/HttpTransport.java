@@ -204,7 +204,7 @@ class HttpTransport {
 
         resp.opCode = op.name;
 
-        if (requestBody != null) {
+        if (requestBody != null && requestBody.length > 0) {
             if (offsetWithinContentsArray < 0 ||
                     length < 0 ||
                     offsetWithinContentsArray + length < 0 || // integer overflow

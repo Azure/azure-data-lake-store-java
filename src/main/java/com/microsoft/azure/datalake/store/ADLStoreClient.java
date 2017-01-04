@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -710,14 +709,7 @@ public class ADLStoreClient {
      * @throws IOException {@link ADLException} is thrown if there is an error
      */
     public ContentSummary getContentSummary(String path) throws IOException {
-        RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
-        OperationResponse resp = new OperationResponse();
-        ContentSummary contentSummary  = Core.getContentSummary(path, this, opts, resp);
-        if (!resp.successful) {
-            throw getExceptionFromResponse(resp, "Error getting contentSummary for file " + path);
-        }
-        return contentSummary;
+        return (new ContentSummaryProcessor()).getContentSummary(this, path);
     }
 
 

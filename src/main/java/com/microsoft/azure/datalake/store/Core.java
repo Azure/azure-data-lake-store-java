@@ -203,7 +203,6 @@ public class Core {
                                         ADLStoreClient client,
                                         RequestOptions opts,
                                         OperationResponse resp) {
-        if (contents == null || contents.length == 0 || length == 0) return;
 
         QueryParams qp = new QueryParams();
         if (autoCreate) qp.add("appendMode", "autocreate");

@@ -5,7 +5,7 @@
  
  - For getting started introduction to the SDK, see here: https://github.com/Azure-samples/data-lake-store-java-upload-download-get-started 
   
- - For the SDK Javadoc, see here: http://azure.github.io/azure-data-lake-store-java
+ - For the SDK Javadoc, see here: http://azure.github.io/azure-data-lake-store-java/javadoc
  
 
 
