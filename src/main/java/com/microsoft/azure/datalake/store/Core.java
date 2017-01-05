@@ -871,7 +871,7 @@ public class Core {
                         if (fieldName.equals("aclBit")) aclBit = Boolean.parseBoolean(fieldValue);
                         if (fieldName.equals("msExpirationTime")) {
                             long expiryms = Long.parseLong(fieldValue);
-                            if (expiryms > 0) expiryTime = new Date(expiryms);
+                            expiryTime = (expiryms > 0) ? new Date(expiryms) : null;
                         }
                     }
                     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {

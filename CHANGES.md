@@ -1,5 +1,8 @@
 # Changes to the SDK
 
+### Version 2.1.4
+1. fixed bug in Core.listStatus() for expiryTime parsing
+
 ### Version 2.1.2
 1. Changed implementation of ADLStoreClient.getContentSummary to do the directory enumeration on client side rather than server side. This
 makes the call more performant and reliable.
