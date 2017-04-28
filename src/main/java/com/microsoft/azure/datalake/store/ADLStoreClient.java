@@ -1100,26 +1100,24 @@ public class ADLStoreClient {
      * @return the {@link ADLException}, or {@code null} if the {@code resp.successful} is {@code true}
      */
     public IOException getExceptionFromResponse(OperationResponse resp, String defaultMessage) {
+        String messageSuffix = " [ServerRequestId:" + resp.requestId + "]";
         if (remoteExceptionsEnabled() &&
                 resp.remoteExceptionJavaClassName !=null &&
                 !resp.remoteExceptionJavaClassName.equals("")) {
-            return getRemoteException(resp.remoteExceptionJavaClassName, resp.remoteExceptionMessage);
+            return getRemoteException(resp.remoteExceptionJavaClassName, resp.remoteExceptionMessage + messageSuffix);
         } else {
-            String msg = resp.message;
-            if (msg == null || msg.length() == 0) {
-                if (resp.ex != null) {
-                    msg = "Operation " + resp.opCode + " failed with exception " + resp.ex.getClass().getName() + " : " + resp.ex.getMessage();
-                } else if (resp.httpResponseCode > 0) {
-                    msg = "Operation " + resp.opCode + " failed with HTTP" + resp.httpResponseCode + " : " + resp.remoteExceptionName;
-                } else {
-                    msg = defaultMessage;
-                }
+            String msg = resp.message == null ? defaultMessage : defaultMessage + "\n" + resp.message;
+            if (resp.ex != null) {
+                msg = msg + "\nOperation " + resp.opCode + " failed with exception " + resp.ex.getClass().getName() + " : " + resp.ex.getMessage();
+            } else if (resp.httpResponseCode > 0) {
+                msg = msg + "\nOperation " + resp.opCode + " failed with HTTP" + resp.httpResponseCode + " : " + resp.remoteExceptionName;
             }
-            msg = msg + "\n" +
-                    "Last encountered exception thrown after " +
+            msg = msg +
+                    "\nLast encountered exception thrown after " +
                     (resp.numRetries+1) +
-                    " tries ";
+                    " tries. ";
             if (resp.exceptionHistory != null) msg = msg + "[" + resp.exceptionHistory + "]";
+            msg = msg + "\n" + messageSuffix;
 
             ADLException ex = new ADLException(msg);
             ex.httpResponseCode = resp.httpResponseCode;

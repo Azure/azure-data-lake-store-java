@@ -146,7 +146,8 @@ public class ADLFileOutputStream extends OutputStream {
             // Ignoring this, because HBase actually calls flush after close() <sigh>
             if (streamClosed) return;
             if (cursor == 0 && (syncFlag==SyncFlag.DATA)) return;  // nothing to flush
-            if (cursor == 0 && lastFlushUpdatedMetadata) return; // do not send a flush if the last flush updated metadata and there is no data
+            if (cursor == 0 && lastFlushUpdatedMetadata && syncFlag == SyncFlag.METADATA) return; // do not send a
+                                                       // flush if the last flush updated metadata and there is no data
             if (buffer == null) buffer = new byte[blocksize];
             RequestOptions opts = new RequestOptions();
             opts.retryPolicy = new ExponentialBackoffPolicy();

@@ -108,6 +108,7 @@ public class AzureADAuthenticator {
         qp.add("grant_type", "password");
         qp.add("resource", resource);
         qp.add("scope", "openid");
+        qp.add("client_id", clientId);
         qp.add("username",username);
         qp.add("password",password);
         log.debug("AADToken: starting to fetch token using username for user " + username );

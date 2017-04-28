@@ -164,7 +164,6 @@ class HttpTransport {
                                        RequestOptions opts,
                                        OperationResponse resp) {
 
-
         if (client == null) throw new IllegalArgumentException("client is null");
         if (client.getAccountName() == null || client.getAccountName().equals("")) {
             resp.successful = false;
@@ -185,6 +184,7 @@ class HttpTransport {
         } catch (IOException ex) {
             resp.successful = false;
             resp.message = "Error fetching access token";
+            resp.ex = ex;
             resp.tokenAcquisitionLatency = System.nanoTime() - tokenStartTime;
             return;
         }
@@ -224,11 +224,7 @@ class HttpTransport {
         urlString.append(client.getHttpPrefix());    // http or https
         urlString.append("://");
         urlString.append(client.getAccountName());
-        if (op.isExt) {
-            urlString.append("/WebHdfsExt");
-        } else {
-            urlString.append("/webhdfs/v1");
-        }
+        urlString.append(op.namespace);
 
         String prefix = client.getFilePathPrefix();
         if (prefix != null) urlString.append(prefix);

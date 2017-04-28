@@ -1,5 +1,10 @@
 # Changes to the SDK
 
+### Version 2.1.5
+1. Fixed bug in ADLFileOutputStream, where calling close() right after calling flush() would not release the lease on the file, locking the file out for 10 mins
+2. Added server trace ID to exception messages, so failures are easier to troubleshoot for customer-support calls
+3. Changed exception handling for token fetching; exceptions from the token fetching process were previously getting replaced with a generic (unhelpful) error message
+
 ### Version 2.1.4
 1. fixed bug in Core.listStatus() for expiryTime parsing
 

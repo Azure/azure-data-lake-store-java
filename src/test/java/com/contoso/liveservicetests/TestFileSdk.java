@@ -773,7 +773,7 @@ public class TestFileSdk {
         assertTrue("blocksize should always be 256MB from server", d.blocksize == 256*1024*1024);
         assertTrue("replicartion factor size should always be 1 from server", d.replicationFactor == 1);
         assertTrue("expiry time should be null", d.expiryTime == null);
-        assertTrue("aclBit should be true in unsupported environment", d.aclBit == true);
+        assertTrue("aclBit should be false", d.aclBit == false);
 
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.HOUR_OF_DAY, -1);
@@ -792,7 +792,7 @@ public class TestFileSdk {
         System.out.println("Running getDirectoryEntryforDirectory");
 
         boolean succeeded = client.createDirectory(dirname);
-        assertTrue("Directory creation shoul dnot fail", succeeded);
+        assertTrue("Directory creation should not fail", succeeded);
 
         DirectoryEntry de = client.getDirectoryEntry(dirname);
         assertTrue("Directory fullname should match", de.fullName.equals(dirname));
@@ -804,7 +804,7 @@ public class TestFileSdk {
         assertTrue("blocksize should always be 0 for directory. Got " + de.blocksize, de.blocksize == 0);
         assertTrue("replication factor size should always be 0 for directory. Got " + de.replicationFactor, de.replicationFactor == 0);
         assertTrue("expiry time should be null for directory", de.expiryTime == null);
-        assertTrue("aclBit should be false for this directory in unsupported environment", de.aclBit == true);
+        assertTrue("aclBit should be false for directory", de.aclBit == false);
 
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.HOUR_OF_DAY, -1);
