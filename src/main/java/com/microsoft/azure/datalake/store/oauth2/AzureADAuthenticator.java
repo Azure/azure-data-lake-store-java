@@ -145,6 +145,7 @@ public class AzureADAuthenticator {
                         fieldValue = jp.getText();
 
                         if (fieldName.equals("access_token")) token.accessToken = fieldValue;
+                        if (fieldName.equals("refresh_token")) token.refreshToken = fieldValue;
                         if (fieldName.equals("expires_in")) expiryPeriod = Integer.parseInt(fieldValue);
                     }
                     jp.nextToken();

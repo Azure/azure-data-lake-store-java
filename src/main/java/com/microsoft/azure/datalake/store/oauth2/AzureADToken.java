@@ -14,5 +14,6 @@ import java.util.Date;
  */
 public class AzureADToken {
     public String accessToken;
+    public String refreshToken;
     public Date expiry;
 }
