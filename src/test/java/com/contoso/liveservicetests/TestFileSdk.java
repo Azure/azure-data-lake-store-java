@@ -112,7 +112,7 @@ public class TestFileSdk {
 
         // Contains language names in that language
         // non-AlphaNum-chars.Traditional-Chinese.Simplified-Chinese.Hebrew.Hindi.Spanish
-        String unicodeFilename = "ch+ ch.官話.官话.עברית.हिंदी.español.txt";
+        String unicodeFilename = "ch+ ch.官話.官话.עברית.हिंदी.español.~`!@#$%^&*()_.+=-{}[]|;',.<>?.txt";
 
         String testDirectory = directory + "/Sdk.smallFileWithUnicodeCharacters/";
         String filename = testDirectory + unicodeFilename;

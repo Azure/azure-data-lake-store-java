@@ -65,14 +65,22 @@ class ContentSummaryProcessor {
             try {
                 DirectoryEntry de;
                 while ((de = queue.poll()) != null) {
-                    if (de.type == DirectoryEntryType.DIRECTORY) {
-                        processDirectoryTree(de.fullName);
+                    try {
+                        if (de.type == DirectoryEntryType.DIRECTORY) {  // we should only ever get directories here
+                            processDirectoryTree(de.fullName);
+                        }
+                    } catch (ADLException ex) {
+                        if (ex.httpResponseCode == 404) {
+                            // swallow - the file or directory got deleted after we enumerated it
+                        } else {
+                            throw ex;
+                        }
+                    } finally {
                         queue.unregister();
                     }
                 }
             } catch (IOException ex) {
-                ex.printStackTrace();
-                System.exit(1000);
+                throw new RuntimeException("IOException processing Directory tree", ex);
             }
         }
     }

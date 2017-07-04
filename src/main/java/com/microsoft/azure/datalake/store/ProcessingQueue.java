@@ -53,13 +53,13 @@ class ProcessingQueue<T> {
     public synchronized void add(T item) {
         if (item == null) throw new IllegalArgumentException("Cannot put null into queue");
         internalQueue.add(item);
-        this.notify();
+        this.notifyAll();
     }
 
     public synchronized T poll() {
         try {
             while (isQueueEmpty() && !done())
-                wait();
+                this.wait();
             if (!isQueueEmpty()) {
                 processorCount++;  // current thread is now processing the item we pop
                 return internalQueue.poll();

@@ -340,7 +340,7 @@ public class Core {
         QueryParams qp = new QueryParams();
         qp.add("destination", destination);
 
-        if (overwrite) qp.add("overwrite", "true");
+        if (overwrite) qp.add("renameoptions", "OVERWRITE");
 
         HttpTransport.makeCall(client, Operation.RENAME, path, qp, null, 0, 0, opts, resp);
         if (!resp.successful) return false;

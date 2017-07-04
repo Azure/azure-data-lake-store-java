@@ -44,11 +44,32 @@ public class TestPositionedReads {
     }
 
     @Test
+    public void smallFileSeek() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        String filename = directory + "/" + "PositionedReads.smallFileSeek.dat";
+        System.out.println("Running smallFileSeek");
+
+        int fileLength = 1024;
+        OutputStream stream = client.createFile(filename, IfExists.OVERWRITE);
+        byte[] content = HelperUtils.getRandomBuffer(fileLength);
+        stream.write(content);
+        stream.close();
+
+        ADLFileInputStream instream = client.getReadStream(filename);
+        assertTrue("File length should be as expected", instream.length() == fileLength);
+        assertTrue("File position initially should be 0", instream.getPos() == 0);
+        instream.seek(instream.length() - 2);
+        assertTrue("Premature EOF at (-2)", instream.read() != -1);
+        assertTrue("Premature EOF at (-1)", instream.read() != -1);
+        assertTrue("read() should return -1 at EOF", instream.read() == -1);
+    }
+
+    @Test
     public void seekAndCheck() throws IOException {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "PositionedReads.seekAndCheck.txt";
+        System.out.println("Running seekAndCheck");
 
-        boolean overwrite = true;
         OutputStream stream = client.createFile(filename, IfExists.OVERWRITE);
         byte[] content = HelperUtils.getSampleText1();
         stream.write(content);

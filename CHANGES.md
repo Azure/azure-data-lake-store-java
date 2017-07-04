@@ -1,5 +1,11 @@
 # Changes to the SDK
 
+### Version 2.2.0-preview1
+1. Added support for DeviceCode auth flow
+2. Added support for acquiring token using Azure VM's MSI service
+3. Switched all internal TokenProviders to use https://datalake.azure.net/ as "resource" in AAD Tokens instead of https://management.core.windows.net/
+4. Misc robustness fixes in ADLStoreClient.GetContentSummary
+
 ### Version 2.1.5
 1. Fixed bug in ADLFileOutputStream, where calling close() right after calling flush() would not release the lease on the file, locking the file out for 10 mins
 2. Added server trace ID to exception messages, so failures are easier to troubleshoot for customer-support calls

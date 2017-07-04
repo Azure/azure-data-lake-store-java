@@ -84,17 +84,20 @@ public class LatencyTracker {
     static String get() {
         if (disabled) return null;
         int count = 0;
+        String entry = null;
         String separator = "";
         StringBuilder line = new StringBuilder(MAXPERLINE * 2);
-        String entry = Q.poll();
-        if (entry == null) return null;
-        while (entry != null && count < MAXPERLINE) {
-            line.append(separator);
-            line.append(entry);
-            separator = ";";
-            count++;
+
+        do {
             entry = Q.poll();
-        }
-        return line.toString();
+            if (entry != null)
+             {
+                line.append(separator);
+                line.append(entry);
+                separator = ";";
+                count++;
+            }
+        } while (entry != null && count <= MAXPERLINE);
+        return (count > 0) ? line.toString() : null;
     }
 }

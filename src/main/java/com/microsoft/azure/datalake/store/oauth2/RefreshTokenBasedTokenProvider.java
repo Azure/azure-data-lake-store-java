@@ -22,12 +22,40 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
     /**
      * constructs a token provider based on the refresh token provided
      *
+     * @param refreshToken the refresh token
+     */
+    public RefreshTokenBasedTokenProvider(String refreshToken) {
+        this.clientId = null;
+        this.refreshToken = refreshToken;
+    }
+
+    /**
+     * constructs a token provider based on the refresh token provided
+     *
      * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
      * @param refreshToken the refresh token
      */
     public RefreshTokenBasedTokenProvider(String clientId, String refreshToken) {
         this.clientId = clientId;
         this.refreshToken = refreshToken;
+    }
+
+    /**
+     * constructs a token provider based on the refresh token provided
+     *
+     * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
+     * @param refreshToken the refresh token
+     */
+    public RefreshTokenBasedTokenProvider(String clientId, RefreshTokenInfo refreshToken) {
+        this.clientId = clientId;
+        this.refreshToken = refreshToken.refreshToken;
+        if (refreshToken.accessToken != null &&
+                !refreshToken.accessToken.equals("") &&
+                refreshToken.accessTokenExpiry != null) {
+            this.token = new AzureADToken();
+            this.token.accessToken = refreshToken.accessToken;
+            this.token.expiry = refreshToken.accessTokenExpiry;
+        }
     }
 
     @Override

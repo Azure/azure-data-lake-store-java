@@ -27,6 +27,7 @@ import java.util.Date;
 public class AzureADAuthenticator {
 
     private static final Logger log = LoggerFactory.getLogger(AzureADAuthenticator.class.getName());
+    static final String resource = "https://datalake.azure.net/";
 
     /**
      * gets Azure Active Directory token using the user ID and password of a service principal (that is, Web App
@@ -48,7 +49,6 @@ public class AzureADAuthenticator {
     public static AzureADToken getTokenUsingClientCreds(String authEndpoint, String clientId, String clientSecret)
             throws IOException
     {
-        String resource = "https://management.core.windows.net/";
         QueryParams qp = new QueryParams();
 
         qp.add("resource", resource);
@@ -57,9 +57,20 @@ public class AzureADAuthenticator {
         qp.add("client_secret", clientSecret);
         log.debug("AADToken: starting to fetch token using client creds for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp);
+        return getTokenCall(authEndpoint, qp.serialize());
     }
 
+    public static AzureADToken getTokenFromMsi(int localPort, String tenantGuid) throws IOException {
+        String authEndpoint  = "http://localhost:" + localPort + "/oauth2/token";
+        String authority = "https://login.microsoftonline.com/" + tenantGuid;
+
+        QueryParams qp = new QueryParams();
+        qp.add("authority", authority);
+        qp.add("resource", resource);
+        log.debug("AADToken: starting to fetch token using MSI for authority " + authority);
+
+        return getTokenCall(authEndpoint, qp.serialize());
+    }
 
     /**
      * gets Azure Active Directory token using refresh token
@@ -77,10 +88,10 @@ public class AzureADAuthenticator {
         QueryParams qp = new QueryParams();
         qp.add("grant_type", "refresh_token");
         qp.add("refresh_token", refreshToken);
-        qp.add("client_id", clientId);
+        if (clientId != null) qp.add("client_id", clientId);
         log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp);
+        return getTokenCall(authEndpoint, qp.serialize());
     }
 
     /**
@@ -102,7 +113,6 @@ public class AzureADAuthenticator {
             throws IOException
     {
         String authEndpoint = "https://login.microsoftonline.com/Common/oauth2/token";
-        String resource = "https://management.core.windows.net/";
 
         QueryParams qp = new QueryParams();
         qp.add("grant_type", "password");
@@ -113,56 +123,62 @@ public class AzureADAuthenticator {
         qp.add("password",password);
         log.debug("AADToken: starting to fetch token using username for user " + username );
 
-        return getTokenCall(authEndpoint, qp);
+        return getTokenCall(authEndpoint, qp.serialize());
     }
 
-    private static AzureADToken getTokenCall(String authEndpoint, QueryParams qp)
+    private static AzureADToken getTokenCall(String authEndpoint, String body)
             throws IOException
     {
-        AzureADToken token = new AzureADToken();
+        AzureADToken token;
 
         URL url = new URL(authEndpoint);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
 
         conn.setDoOutput(true);
-        conn.getOutputStream().write(qp.serialize().getBytes("UTF-8"));
+        conn.getOutputStream().write(body.getBytes("UTF-8"));
 
         int httpResponseCode = conn.getResponseCode();
         if (httpResponseCode == 200) {
             InputStream httpResponseStream = conn.getInputStream();
-            try {
-                int expiryPeriod = 0;
-
-                JsonFactory jf = new JsonFactory();
-                JsonParser jp = jf.createParser(httpResponseStream);
-                String fieldName, fieldValue;
-                jp.nextToken();
-                while (jp.hasCurrentToken()) {
-                    if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                        fieldName = jp.getCurrentName();
-                        jp.nextToken();  // field value
-                        fieldValue = jp.getText();
-
-                        if (fieldName.equals("access_token")) token.accessToken = fieldValue;
-                        if (fieldName.equals("expires_in")) expiryPeriod = Integer.parseInt(fieldValue);
-                    }
-                    jp.nextToken();
-                }
-                jp.close();
-                long expiry = System.currentTimeMillis();
-                expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
-                token.expiry = new Date(expiry);
-                log.debug("AADToken: fetched token with expiry " + token.expiry.toString());
-            } catch (Exception ex) {
-                log.debug("AADToken: got exception when parsing json token " + ex.toString());
-                throw ex;
-            } finally {
-                httpResponseStream.close();
-            }
+            token = parseTokenFromStream(httpResponseStream);
         } else {
             log.debug("AADToken: HTTP connection failed for getting token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
             throw new IOException("Failed to acquire token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
+        }
+        return token;
+    }
+
+    private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {
+        AzureADToken token = new AzureADToken();
+        try {
+            int expiryPeriod = 0;
+
+            JsonFactory jf = new JsonFactory();
+            JsonParser jp = jf.createParser(httpResponseStream);
+            String fieldName, fieldValue;
+            jp.nextToken();
+            while (jp.hasCurrentToken()) {
+                if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
+                    fieldName = jp.getCurrentName();
+                    jp.nextToken();  // field value
+                    fieldValue = jp.getText();
+
+                    if (fieldName.equals("access_token")) token.accessToken = fieldValue;
+                    if (fieldName.equals("expires_in")) expiryPeriod = Integer.parseInt(fieldValue);
+                }
+                jp.nextToken();
+            }
+            jp.close();
+            long expiry = System.currentTimeMillis();
+            expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
+            token.expiry = new Date(expiry);
+            log.debug("AADToken: fetched token with expiry " + token.expiry.toString());
+        } catch (Exception ex) {
+            log.debug("AADToken: got exception when parsing json token " + ex.toString());
+            throw ex;
+        } finally {
+            httpResponseStream.close();
         }
         return token;
     }

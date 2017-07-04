@@ -198,6 +198,31 @@ public class ADLStoreClient {
         // just a convenience overload, for easy discoverability in IDE's autocompletion.
         return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
 
+    /**
+     * gets an {@code ADLStoreClient} object.
+     *
+     * @param accountFQDN string containing the fully qualified domain name of the account.
+     *                    For example, contoso.azuredatalakestore.net
+     * @param tokenProvider {@link DeviceCodeTokenProvider} that can provide the AAD token
+     * @return the client object
+     */
+    public static ADLStoreClient createClient(String accountFQDN, DeviceCodeTokenProvider tokenProvider) {
+        // just a convenience overload, for easy discoverability in IDE's autocompletion.
+        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
+
+    /**
+     * gets an {@code ADLStoreClient} object.
+     *
+     * @param accountFQDN string containing the fully qualified domain name of the account.
+     *                    For example, contoso.azuredatalakestore.net
+     * @param tokenProvider {@link DeviceCodeTokenProvider} that can provide the AAD token
+     * @return the client object
+     */
+    public static ADLStoreClient createClient(String accountFQDN, MsiTokenProvider tokenProvider) {
+        // just a convenience overload, for easy discoverability in IDE's autocompletion.
+        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
+
+
     /* ----------------------------------------------------------------------------------------------------------*/
 
     /*

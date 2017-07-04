@@ -8,7 +8,6 @@ ClientId=
 OAuth2TokenUrl=
 ClientAppName=
 ClientRedirectUri=
-Resource=https://management.core.windows.net/
 
 # Control what unit tests are enabled
 CoreTestsEnabled=true
