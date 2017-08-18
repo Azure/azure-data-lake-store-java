@@ -88,7 +88,7 @@ public class Utils {
             RequestOptions opts = new RequestOptions();
             opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
             OperationResponse resp = new OperationResponse();
-            Core.create(filename, overwrite, null, contents, 0, contents.length, null, null, true, SyncFlag.CLOSE, client, opts, resp);
+            Core.create(filename, overwrite, null, contents, 0, contents.length, null, null, true, SyncFlag.CLOSE, client, null, opts, resp);
             if (!resp.successful) {
                 throw client.getExceptionFromResponse(resp, "Error creating file " + filename);
             }

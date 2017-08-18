@@ -56,7 +56,7 @@ public class HelperUtils {
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         Core.create(filename, true, null, null, 0, 0, null,
-                null, true, SyncFlag.CLOSE, client, opts, resp);
+                null, true, SyncFlag.CLOSE, client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error creating file " + filename);
         }

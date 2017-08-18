@@ -12,6 +12,7 @@ import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -273,12 +274,14 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
+        HttpClientConnectionManager connectionManager = ADLConnectionManagerFactory.getConnectionManager();
         Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
-            leaseId, createParent, SyncFlag.DATA, this, opts, resp);
+            leaseId, createParent, SyncFlag.DATA, this, connectionManager, opts, resp);
         if (!resp.successful) {
+            ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
             throw this.getExceptionFromResponse(resp, "Error creating file " + path);
         }
-        return new ADLFileOutputStream(path, this, true, leaseId);
+        return new ADLFileOutputStream(path, this, connectionManager, true, leaseId);
     }
 
 
@@ -313,12 +316,14 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, opts,
+        HttpClientConnectionManager connectionManager = ADLConnectionManagerFactory.getConnectionManager();
+        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, connectionManager, opts,
                 resp);
         if (!resp.successful) {
+            ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
             throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
         }
-        return new ADLFileOutputStream(path, this, false, leaseId);
+        return new ADLFileOutputStream(path, this, connectionManager, false, leaseId);
     }
 
     /**
@@ -336,7 +341,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.concat(path, fileList, this, opts, resp);
+        Core.concat(path, fileList, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error concatenating files into " + path);
         }
@@ -355,7 +360,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.setExpiryTime(path, expiryOption, expiryTimeMilliseconds, this, opts, resp);
+        Core.setExpiryTime(path, expiryOption, expiryTimeMilliseconds, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error concatenating files into " + path);
         }
@@ -547,7 +552,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        List<DirectoryEntry> dirEnt  = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, opts, resp);
+        List<DirectoryEntry> dirEnt  = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error enumerating directory " + path);
         }
@@ -577,7 +582,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        boolean succeeded = Core.mkdirs(path, octalPermission, this, opts, resp);
+        boolean succeeded = Core.mkdirs(path, octalPermission, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error creating directory " + path);
         }
@@ -597,7 +602,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        boolean succeeded = Core.delete(path, true, this, opts, resp);
+        boolean succeeded = Core.delete(path, true, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error deleting directory tree " + path);
         }
@@ -616,7 +621,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.removeDefaultAcl(path, this, opts, resp);
+        Core.removeDefaultAcl(path, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error removing default ACLs for directory " + path);
         }
@@ -668,7 +673,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        boolean succeeded = Core.rename(path, newName, overwrite, this, opts, resp);
+        boolean succeeded = Core.rename(path, newName, overwrite, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error renaming file " + path);
         }
@@ -688,7 +693,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        boolean succeeded = Core.delete(path, false, this, opts, resp);
+        boolean succeeded = Core.delete(path, false, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error deleting directory " + path);
         }
@@ -720,7 +725,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        DirectoryEntry dirEnt  = Core.getFileStatus(path, oidOrUpn, this, opts, resp);
+        DirectoryEntry dirEnt  = Core.getFileStatus(path, oidOrUpn, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error getting info for file " + path);
         }
@@ -751,7 +756,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.setOwner(path, owner, group, this, opts, resp);
+        Core.setOwner(path, owner, group, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error setting owner for file " + path);
         }
@@ -772,7 +777,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.setTimes(path, atimeLong, mtimeLong, this, opts, resp);
+        Core.setTimes(path, atimeLong, mtimeLong, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error setting times for file " + path);
         }
@@ -825,7 +830,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.setPermission(path, octalPermissions, this, opts, resp);
+        Core.setPermission(path, octalPermissions, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error setting times for " + path);
         }
@@ -847,7 +852,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.checkAccess(path, rwx, this, opts, resp);
+        Core.checkAccess(path, rwx, this, null, opts, resp);
         if (!resp.successful) {
             if (resp.httpResponseCode == 401 || resp.httpResponseCode == 403) return false;
             throw getExceptionFromResponse(resp, "Error checking access for " + path);
@@ -868,7 +873,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.modifyAclEntries(path, aclSpec, this, opts, resp);
+        Core.modifyAclEntries(path, aclSpec, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error modifying ACLs for " + path);
         }
@@ -887,7 +892,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.setAcl(path, aclSpec, this, opts, resp);
+        Core.setAcl(path, aclSpec, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error setting ACLs for " + path);
         }
@@ -904,7 +909,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.removeAclEntries(path, aclSpec, this, opts, resp);
+        Core.removeAclEntries(path, aclSpec, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error removing ACLs for " + path);
         }
@@ -920,7 +925,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        Core.removeAcl(path, this, opts, resp);
+        Core.removeAcl(path, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error removing all ACLs for file " + path);
         }
@@ -953,7 +958,7 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        status = Core.getAclStatus(path, oidOrUpn, this, opts, resp);
+        status = Core.getAclStatus(path, oidOrUpn, this, null, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error getting  ACL Status for " + path);
         }

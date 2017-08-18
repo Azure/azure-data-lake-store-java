@@ -99,7 +99,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, 0, true,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error in ConcurrentAppend with null content " + filename);
         }
@@ -124,7 +124,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, 0, true,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error in ConcurrentAppend with 0-len content " + filename);
         }
@@ -149,7 +149,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, true,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error in ConcurrentAppend with small content " + filename);
         }
@@ -177,7 +177,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, false,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "(expected) Exception from concurrentAppend " + filename);
         }
@@ -198,7 +198,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, true,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Exception from concurrentAppend " + filename);
         }
@@ -209,7 +209,7 @@ public class TestCore {
         opts.retryPolicy = new NoRetryPolicy();
         resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, false,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Exception from concurrentAppend " + filename);
         }
@@ -295,7 +295,7 @@ public class TestCore {
         RequestOptions opts = new RequestOptions();
         OperationResponse resp = new OperationResponse();
         Core.create(filename, overwrite, null, b, 0, b.length, null, null,
-            true, SyncFlag.CLOSE, client, opts, resp);
+            true, SyncFlag.CLOSE, client, null, opts, resp);
         if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error creating file " + filename);
     }
 
@@ -307,7 +307,7 @@ public class TestCore {
         while (!eof && count<b.length) {
             RequestOptions opts = new RequestOptions();
             OperationResponse resp = new OperationResponse();
-            InputStream in = Core.open(filename, count, 0, null, client, opts, resp);
+            InputStream in = Core.open(filename, count, 0, null, client, null, opts, resp);
             if (resp.httpResponseCode == 403 || resp.httpResponseCode == 416) {
                 eof = true;
                 continue;
@@ -328,7 +328,7 @@ public class TestCore {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        DirectoryEntry de = Core.getFileStatus(filename, UserGroupRepresentation.OID, client, opts, resp);
+        DirectoryEntry de = Core.getFileStatus(filename, UserGroupRepresentation.OID, client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error in ConcurrentAppend with null content " + filename);
         }

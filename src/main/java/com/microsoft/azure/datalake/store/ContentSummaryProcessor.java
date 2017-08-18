@@ -127,7 +127,7 @@ class ContentSummaryProcessor {
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         List<DirectoryEntry> dirEnt = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn,
-                client, opts, resp);
+                client, null, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error enumerating directory " + path);
         }
