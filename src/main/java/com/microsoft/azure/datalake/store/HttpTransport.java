@@ -52,9 +52,6 @@ class HttpTransport {
 
     static {
         poolingConnectionManager.setMaxTotal(100);
-        poolingConnectionManager.setDefaultConnectionConfig(ConnectionConfig.custom()
-                .setBufferSize(4 * 1024 *1024)
-                .build());
         poolingConnectionManager.setDefaultSocketConfig(SocketConfig.custom()
                 .setTcpNoDelay(true)
                 .build());
