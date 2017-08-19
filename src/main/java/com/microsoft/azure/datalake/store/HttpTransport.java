@@ -137,15 +137,15 @@ class HttpTransport {
             if (log.isDebugEnabled()) {
                 String logline =
                         "HTTPRequest," + outcome +
-                                ",cReqId:" + opts.requestid +
-                                ",lat:" + Long.toString(resp.lastCallLatency) +
-                                ",err:" + error +
-                                ",Reqlen:" + length +
-                                ",Resplen:" + respLength +
-                                ",token_ns:" + Long.toString(resp.tokenAcquisitionLatency) +
-                                ",sReqId:" + resp.requestId +
-                                ",path:" + path +
-                                ",qp:" + queryParams.serialize();
+                        ",cReqId:" + opts.requestid +
+                        ",lat:" + Long.toString(resp.lastCallLatency) +
+                        ",err:" + error +
+                        ",Reqlen:" + length +
+                        ",Resplen:" + respLength +
+                        ",token_ns:" + Long.toString(resp.tokenAcquisitionLatency) +
+                        ",sReqId:" + resp.requestId +
+                        ",path:" + path +
+                        ",qp:" + queryParams.serialize();
                 log.debug(logline);
             }
         } while (!resp.successful && opts.retryPolicy.shouldRetry(resp.httpResponseCode, resp.ex));
@@ -272,10 +272,10 @@ class HttpTransport {
         }
 
         HttpRequestBase httpRequest = null;
-        if (op.method.equals("GET")){
+        if (op.method.equals("GET")) {
             httpRequest = new HttpGet(uri);
         }
-        else if (op.method.equals("PUT")){
+        else if (op.method.equals("PUT")) {
             httpRequest = new HttpPut(uri);
         }
         else if (op.method.equals("POST")) {
