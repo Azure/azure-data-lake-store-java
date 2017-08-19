@@ -7,7 +7,7 @@
 package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +45,7 @@ public class ADLFileInputStream extends InputStream {
     //                                                      of valid bytes in buffer)
     private boolean streamClosed = false;
 
-    HttpClientConnectionManager connectionManager;
+    HttpContext httpContext;
 
     // no public constructor - use Factory Method in AzureDataLakeStoreClient
     ADLFileInputStream(String filename, DirectoryEntry de, ADLStoreClient client) {
@@ -53,7 +53,7 @@ public class ADLFileInputStream extends InputStream {
         this.filename = filename;
         this.client = client;
         this.directoryEntry = de;
-        this.connectionManager = ADLConnectionManagerFactory.getConnectionManager();
+        this.httpContext = HttpContextStore.getHttpContext();
         if (log.isTraceEnabled()) {
             log.trace("ADLFIleInputStream created for client {} for file {}", client.getClientId(), filename);
         }
@@ -205,7 +205,7 @@ public class ADLFileInputStream extends InputStream {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
-        InputStream inStream = Core.open(filename, position, length, sessionId, client, connectionManager, opts, resp);
+        InputStream inStream = Core.open(filename, position, length, sessionId, client, httpContext, opts, resp);
         if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
         int bytesRead;
         int totalBytesRead = 0;
@@ -224,6 +224,12 @@ public class ADLFileInputStream extends InputStream {
             throw new ADLException("Error reading data from response stream in positioned read() for file " + filename, ex);
         } finally {
             if (inStream != null) inStream.close();
+            if (resp.httpResponse != null){
+                try {
+                    resp.httpResponse.close();
+                } catch (IOException ex)
+                {}
+            }
         }
         return totalBytesRead;
     }
@@ -353,7 +359,7 @@ public class ADLFileInputStream extends InputStream {
         }
         streamClosed = true;
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
-        ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
+        HttpContextStore.releaseHttpContext(httpContext);
     }
 
     /**

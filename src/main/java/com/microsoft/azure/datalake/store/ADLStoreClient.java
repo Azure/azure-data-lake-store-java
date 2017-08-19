@@ -12,7 +12,7 @@ import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
-import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +92,15 @@ public class ADLStoreClient {
 
     // private constructor, references should be obtained using the createClient factory method
     private ADLStoreClient(String accountFQDN, String accessToken, long clientId, AccessTokenProvider tokenProvider) {
-        this.accountFQDN = accountFQDN;
+        if (accountFQDN.endsWith(":443")) {
+            // Trim default port from FQDN; otherwise the apache httpclient sends this port to the FE
+            // as part of the HOST HTTP header
+            this.accountFQDN = accountFQDN.substring(0, accountFQDN.length() - 4);
+        }
+        else {
+            this.accountFQDN = accountFQDN;
+        }
+
         this.accessToken = "Bearer " + accessToken;
         this.tokenProvider = tokenProvider;
         this.clientId = clientId;
@@ -274,14 +282,14 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        HttpClientConnectionManager connectionManager = ADLConnectionManagerFactory.getConnectionManager();
+        HttpContext httpContext = HttpContextStore.getHttpContext();
         Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
-            leaseId, createParent, SyncFlag.DATA, this, connectionManager, opts, resp);
+            leaseId, createParent, SyncFlag.DATA, this, httpContext, opts, resp);
         if (!resp.successful) {
-            ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
+            HttpContextStore.releaseHttpContext(httpContext);
             throw this.getExceptionFromResponse(resp, "Error creating file " + path);
         }
-        return new ADLFileOutputStream(path, this, connectionManager, true, leaseId);
+        return new ADLFileOutputStream(path, this, httpContext, true, leaseId);
     }
 
 
@@ -316,14 +324,14 @@ public class ADLStoreClient {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
-        HttpClientConnectionManager connectionManager = ADLConnectionManagerFactory.getConnectionManager();
-        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, connectionManager, opts,
+        HttpContext httpContext = HttpContextStore.getHttpContext();
+        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, httpContext, opts,
                 resp);
         if (!resp.successful) {
-            ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
+            HttpContextStore.releaseHttpContext(httpContext);
             throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
         }
-        return new ADLFileOutputStream(path, this, connectionManager, false, leaseId);
+        return new ADLFileOutputStream(path, this, httpContext, false, leaseId);
     }
 
     /**

@@ -8,7 +8,7 @@ package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
-import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,19 +41,19 @@ public class ADLFileOutputStream extends OutputStream {
     private boolean streamClosed = false;
     private boolean lastFlushUpdatedMetadata = false;
 
-    HttpClientConnectionManager connectionManager;
+    HttpContext httpContext;
 
     // package-private constructor - use Factory Method in AzureDataLakeStoreClient
     ADLFileOutputStream(String filename,
                         ADLStoreClient client,
-                        HttpClientConnectionManager connectionManager,
+                        HttpContext httpContext,
                         boolean isCreate,
                         String leaseId) throws IOException {
         this.filename = filename;
         this.client = client;
         this.isCreate = isCreate;
         this.leaseId = (leaseId == null)? UUID.randomUUID().toString() : leaseId;
-        this.connectionManager = connectionManager;
+        this.httpContext = httpContext;
 
         if (!isCreate) initializeAppendStream();
 
@@ -158,7 +158,7 @@ public class ADLFileOutputStream extends OutputStream {
             opts.retryPolicy = new ExponentialBackoffPolicy();
             OperationResponse resp = new OperationResponse();
             Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId,
-                    leaseId, syncFlag, client, connectionManager, opts, resp);
+                    leaseId, syncFlag, client, httpContext, opts, resp);
             if (!resp.successful) {
                 if (resp.numRetries > 0 && resp.httpResponseCode == 400 && "BadOffsetException".equals(resp.remoteExceptionName)) {
                     // if this was a retry and we get bad offset, then this might be because we got a transient
@@ -194,7 +194,7 @@ public class ADLFileOutputStream extends OutputStream {
         opts.retryPolicy = new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         Core.append(filename, offset, null, 0, 0, leaseId, leaseId, SyncFlag.METADATA,
-            client, connectionManager, opts, resp);
+            client, httpContext, opts, resp);
         return resp.successful;
     }
 
@@ -220,7 +220,7 @@ public class ADLFileOutputStream extends OutputStream {
         if(streamClosed) return; // Return silently upon multiple closes
         flush(SyncFlag.CLOSE);
         streamClosed = true;
-        ADLConnectionManagerFactory.returnConnectionManager(connectionManager);
+        HttpContextStore.releaseHttpContext(httpContext);
         buffer = null;   // release byte buffer so it can be GC'ed even if app continues to hold reference to stream
         if (log.isTraceEnabled()) {
             log.trace("Stream closed for client {} for file {}", client.getClientId(), filename);
