@@ -58,7 +58,7 @@ class HttpTransport {
         poolingConnectionManager.setDefaultSocketConfig(SocketConfig.custom()
                 .setTcpNoDelay(true)
                 .build());
-        poolingConnectionManager.setDefaultMaxPerRoute(10);
+        poolingConnectionManager.setDefaultMaxPerRoute(100);
     }
 
     /**

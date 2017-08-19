@@ -283,13 +283,20 @@ public class ADLStoreClient {
         opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         HttpContext httpContext = HttpContextStore.getHttpContext();
-        Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
-            leaseId, createParent, SyncFlag.DATA, this, httpContext, opts, resp);
-        if (!resp.successful) {
+
+        try {
+            Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
+                    leaseId, createParent, SyncFlag.DATA, this, httpContext, opts, resp);
+            if (!resp.successful) {
+                throw this.getExceptionFromResponse(resp, "Error creating file " + path);
+            }
+
+            ADLFileOutputStream adlFileOutputStream = new ADLFileOutputStream(path, this, httpContext, true, leaseId);
+            httpContext = null;
+            return adlFileOutputStream;
+        } finally {
             HttpContextStore.releaseHttpContext(httpContext);
-            throw this.getExceptionFromResponse(resp, "Error creating file " + path);
         }
-        return new ADLFileOutputStream(path, this, httpContext, true, leaseId);
     }
 
 
@@ -325,13 +332,20 @@ public class ADLStoreClient {
         opts.retryPolicy = new NoRetryPolicy();
         OperationResponse resp = new OperationResponse();
         HttpContext httpContext = HttpContextStore.getHttpContext();
-        Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, httpContext, opts,
-                resp);
-        if (!resp.successful) {
-            HttpContextStore.releaseHttpContext(httpContext);
-            throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
+
+        try {
+            Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, httpContext, opts,
+                    resp);
+            if (!resp.successful) {
+                throw this.getExceptionFromResponse(resp, "Error appending to file " + path);
+            }
+            ADLFileOutputStream adlFileOutputStream = new ADLFileOutputStream(path, this, httpContext, false, leaseId);
+            httpContext = null;
+            return adlFileOutputStream;
         }
-        return new ADLFileOutputStream(path, this, httpContext, false, leaseId);
+        finally {
+            HttpContextStore.releaseHttpContext(httpContext);
+        }
     }
 
     /**

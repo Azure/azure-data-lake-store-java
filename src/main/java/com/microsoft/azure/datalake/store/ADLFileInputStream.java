@@ -60,6 +60,11 @@ public class ADLFileInputStream extends InputStream {
     }
 
     @Override
+    protected void finalize() throws Throwable {
+        HttpContextStore.releaseHttpContext(httpContext);
+    }
+
+    @Override
     public int read() throws IOException {
         byte[] b = new byte[1];
         int i = read(b, 0, 1);
@@ -360,6 +365,7 @@ public class ADLFileInputStream extends InputStream {
         streamClosed = true;
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
         HttpContextStore.releaseHttpContext(httpContext);
+        httpContext = null;
     }
 
     /**

@@ -62,6 +62,11 @@ public class ADLFileOutputStream extends OutputStream {
         }
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        HttpContextStore.releaseHttpContext(httpContext);
+    }
+
     private void initializeAppendStream() throws IOException {
         boolean append0succeeded = doZeroLengthAppend(-1);  // do 0-length append with sync flag to update length
         if (!append0succeeded) {
@@ -221,6 +226,7 @@ public class ADLFileOutputStream extends OutputStream {
         flush(SyncFlag.CLOSE);
         streamClosed = true;
         HttpContextStore.releaseHttpContext(httpContext);
+        httpContext = null;
         buffer = null;   // release byte buffer so it can be GC'ed even if app continues to hold reference to stream
         if (log.isTraceEnabled()) {
             log.trace("Stream closed for client {} for file {}", client.getClientId(), filename);

@@ -18,13 +18,13 @@ import java.util.Stack;
  */
 public class HttpContextStore {
 
-    private static int maxHttpContexts = 10;
+    private static int maxHttpContexts = 25;
     private static Stack<HttpContext> httpContexts = new Stack<>();
 
     static {
         for (int i = 0; i < maxHttpContexts; ++i) {
             BasicHttpContext httpContext = new BasicHttpContext();
-            httpContext.setAttribute(HttpClientContext.USER_TOKEN, httpContext);
+            httpContext.setAttribute(HttpClientContext.USER_TOKEN, i);
             httpContexts.push(httpContext);
         }
     }
@@ -37,8 +37,10 @@ public class HttpContextStore {
         return null;
     }
 
-    public synchronized static void releaseHttpContext(HttpContext httpContext) {
-        if (httpContext != null) {
+    public static void releaseHttpContext(HttpContext httpContext) {
+        if (httpContext == null) return;
+
+        synchronized(HttpContextStore.class) {
             httpContexts.push(httpContext);
         }
     }
