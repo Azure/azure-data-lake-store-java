@@ -62,11 +62,6 @@ public class ADLFileOutputStream extends OutputStream {
         }
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        HttpContextStore.releaseHttpContext(httpContext);
-    }
-
     private void initializeAppendStream() throws IOException {
         boolean append0succeeded = doZeroLengthAppend(-1);  // do 0-length append with sync flag to update length
         if (!append0succeeded) {

@@ -60,11 +60,6 @@ public class ADLFileInputStream extends InputStream {
     }
 
     @Override
-    protected void finalize() throws Throwable {
-        HttpContextStore.releaseHttpContext(httpContext);
-    }
-
-    @Override
     public int read() throws IOException {
         byte[] b = new byte[1];
         int i = read(b, 0, 1);
@@ -229,12 +224,6 @@ public class ADLFileInputStream extends InputStream {
             throw new ADLException("Error reading data from response stream in positioned read() for file " + filename, ex);
         } finally {
             if (inStream != null) inStream.close();
-            if (resp.httpResponse != null){
-                try {
-                    resp.httpResponse.close();
-                } catch (IOException ex)
-                {}
-            }
         }
         return totalBytesRead;
     }

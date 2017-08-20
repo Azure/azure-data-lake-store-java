@@ -6,8 +6,6 @@
 
 package com.microsoft.azure.datalake.store;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-
 import java.io.InputStream;
 
 /**
@@ -47,8 +45,6 @@ public class OperationResponse {
      *
      */
     public InputStream responseStream = null;
-
-    public CloseableHttpResponse httpResponse = null;
 
     /**
      * the server request ID.

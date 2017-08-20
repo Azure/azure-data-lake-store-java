@@ -19,12 +19,12 @@ import java.net.*;
 import java.util.UUID;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
-import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
@@ -48,14 +48,15 @@ class HttpTransport {
     private static final String API_VERSION = "2016-11-01"; // API version used in REST requests
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport");
     private static final Logger tokenlog = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport.tokens");
+
     private static PoolingHttpClientConnectionManager poolingConnectionManager = new PoolingHttpClientConnectionManager();
 
     static {
-        poolingConnectionManager.setMaxTotal(100);
+        poolingConnectionManager.setMaxTotal(10);
+        poolingConnectionManager.setDefaultMaxPerRoute(10);
         poolingConnectionManager.setDefaultSocketConfig(SocketConfig.custom()
                 .setTcpNoDelay(true)
                 .build());
-        poolingConnectionManager.setDefaultMaxPerRoute(100);
     }
 
     /**
@@ -309,14 +310,11 @@ class HttpTransport {
             }
         }
 
-        CloseableHttpClient httpClient = null;
-        CloseableHttpResponse httpResponse = null;
-
         try {
-            httpClient = HttpClients.custom()
+            HttpClient httpClient = HttpClients.custom()
                     .setConnectionManager(poolingConnectionManager)
+                    .setConnectionManagerShared(true)
                     .disableContentCompression()
-                    .disableConnectionState()
                     .disableAutomaticRetries()
                     .disableAuthCaching()
                     .disableCookieManagement()
@@ -327,7 +325,7 @@ class HttpTransport {
                             .build())
                     .build();
 
-            httpResponse = httpClient.execute(httpRequest, httpContext);
+            HttpResponse httpResponse = httpClient.execute(httpRequest, httpContext);
             HttpEntity responseEntity = httpResponse.getEntity();
 
             // get Response Stream if applicable
@@ -358,7 +356,6 @@ class HttpTransport {
             } else {
                 if (op.returnsBody) {  // response stream will be handled by caller
                     resp.responseStream = responseEntity.getContent();
-                    resp.httpResponse = httpResponse;
                 } else {    // read and discard response stream so it is consumed and connection can be reused
                     EntityUtils.consume(responseEntity);
                 }
@@ -366,17 +363,7 @@ class HttpTransport {
         } catch (IOException ex) {
             resp.ex = ex;
             resp.successful = false;
-            if (httpResponse != null) {
-                EntityUtils.consumeQuietly(httpResponse.getEntity());
-            }
-        }
-        finally {
-            if (resp.httpResponse == null && httpResponse != null) {
-                try {
-                    httpResponse.close();
-                } catch (IOException ex)
-                {}
-            }
+            httpRequest.abort();
         }
     }
 

@@ -11,6 +11,7 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 
 import java.util.Stack;
+import java.util.UUID;
 
 /**
  * {@code HttpContextStore} is used to store and retrieve HttpContext objects
@@ -18,23 +19,22 @@ import java.util.Stack;
  */
 public class HttpContextStore {
 
-    private static int maxHttpContexts = 25;
     private static Stack<HttpContext> httpContexts = new Stack<>();
 
-    static {
-        for (int i = 0; i < maxHttpContexts; ++i) {
-            BasicHttpContext httpContext = new BasicHttpContext();
-            httpContext.setAttribute(HttpClientContext.USER_TOKEN, i);
-            httpContexts.push(httpContext);
-        }
+    private static HttpContext getNewHttpContext() {
+        BasicHttpContext httpContext = new BasicHttpContext();
+        httpContext.setAttribute(HttpClientContext.USER_TOKEN, UUID.randomUUID().toString());
+        return httpContext;
     }
 
-    public synchronized static HttpContext getHttpContext() {
-        if (!httpContexts.empty()) {
-            return httpContexts.pop();
+    public static HttpContext getHttpContext() {
+        synchronized(HttpContextStore.class) {
+            if (!httpContexts.empty()) {
+                return httpContexts.pop();
+            }
         }
 
-        return null;
+        return getNewHttpContext();
     }
 
     public static void releaseHttpContext(HttpContext httpContext) {
