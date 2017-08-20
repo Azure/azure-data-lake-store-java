@@ -354,7 +354,6 @@ public class ADLFileInputStream extends InputStream {
         streamClosed = true;
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
         HttpContextStore.releaseHttpContext(httpContext);
-        httpContext = null;
     }
 
     /**

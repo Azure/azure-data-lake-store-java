@@ -221,7 +221,6 @@ public class ADLFileOutputStream extends OutputStream {
         flush(SyncFlag.CLOSE);
         streamClosed = true;
         HttpContextStore.releaseHttpContext(httpContext);
-        httpContext = null;
         buffer = null;   // release byte buffer so it can be GC'ed even if app continues to hold reference to stream
         if (log.isTraceEnabled()) {
             log.trace("Stream closed for client {} for file {}", client.getClientId(), filename);

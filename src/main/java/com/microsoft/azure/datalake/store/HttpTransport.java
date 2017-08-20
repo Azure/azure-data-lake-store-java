@@ -52,8 +52,8 @@ class HttpTransport {
     private static PoolingHttpClientConnectionManager poolingConnectionManager = new PoolingHttpClientConnectionManager();
 
     static {
-        poolingConnectionManager.setMaxTotal(10);
-        poolingConnectionManager.setDefaultMaxPerRoute(10);
+        poolingConnectionManager.setMaxTotal(25);
+        poolingConnectionManager.setDefaultMaxPerRoute(25);
         poolingConnectionManager.setDefaultSocketConfig(SocketConfig.custom()
                 .setTcpNoDelay(true)
                 .build());
@@ -89,6 +89,7 @@ class HttpTransport {
     {
         if (opts == null) throw new IllegalArgumentException("RequestOptions parameter missing from call");
         if (resp == null) throw new IllegalArgumentException("OperationResponse parameter missing from call");
+
 
         if (opts.retryPolicy == null) {
             opts.retryPolicy = new NoRetryPolicy();
@@ -350,8 +351,7 @@ class HttpTransport {
                     tokenlog.debug(logline);
                 }
                 if (resp.responseContentLength > 0) {
-                    InputStream content = responseEntity.getContent();
-                    getCodesFromJSon(content, resp);
+                    getCodesFromJSon(responseEntity.getContent(), resp);
                 }
             } else {
                 if (op.returnsBody) {  // response stream will be handled by caller
