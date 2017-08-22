@@ -112,7 +112,7 @@ public class ADLFileOutputStream extends OutputStream {
 
         // if len > 4MB, then we force-break the write into 4MB chunks
         while (len > blocksize) {
-            flush(SyncFlag.DATA); // flush first, because we want to preserve record
+            flush(SyncFlag.PIPELINE); // flush first, because we want to preserve record
             // boundary of last append
             addToBuffer(b, off, blocksize);
             off += blocksize;
@@ -122,7 +122,7 @@ public class ADLFileOutputStream extends OutputStream {
 
         //if adding this to buffer would overflow buffer, then flush buffer first
         if (len > buffer.length - cursor) {
-            flush(SyncFlag.DATA);
+            flush(SyncFlag.PIPELINE);
         }
         // now we know b will fit in remaining buffer, so just add it in
         addToBuffer(b, off, len);
@@ -150,7 +150,7 @@ public class ADLFileOutputStream extends OutputStream {
             }
             // Ignoring this, because HBase actually calls flush after close() <sigh>
             if (streamClosed) return;
-            if (cursor == 0 && (syncFlag==SyncFlag.DATA)) return;  // nothing to flush
+            if (cursor == 0 && (syncFlag==SyncFlag.DATA || syncFlag==SyncFlag.PIPELINE)) return;  // nothing to flush
             if (cursor == 0 && lastFlushUpdatedMetadata && syncFlag == SyncFlag.METADATA) return; // do not send a
                                                        // flush if the last flush updated metadata and there is no data
             if (buffer == null) buffer = new byte[blocksize];
@@ -186,7 +186,7 @@ public class ADLFileOutputStream extends OutputStream {
             }
             remoteCursor += cursor;
             cursor = 0;
-            lastFlushUpdatedMetadata = (syncFlag != SyncFlag.DATA);
+            lastFlushUpdatedMetadata = (syncFlag == SyncFlag.METADATA || syncFlag == SyncFlag.CLOSE);
         }
 
     private boolean doZeroLengthAppend(long offset) throws IOException {

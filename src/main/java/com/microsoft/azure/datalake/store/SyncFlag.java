@@ -26,5 +26,10 @@ public enum SyncFlag {
    * And close file handle. Once the file handle is closed, lease on the
    * file is released if the stream is opened with leaseid.
    */
-  CLOSE
+  CLOSE,
+
+  /**
+   * Return as soon as the Append is enqueued without waiting for completion
+   */
+  PIPELINE
 }
