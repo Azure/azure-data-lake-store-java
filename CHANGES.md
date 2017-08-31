@@ -1,5 +1,8 @@
 # Changes to the SDK
 
+### Version 2.2.2
+1. (internal-only fix, no user impact) Change MSI token acquisition call to add HTTP header (Metadata: true)
+
 ### Version 2.2.1
 1. Added support for DeviceCode auth flow
 2. Added support for acquiring token using Azure VM's MSI service

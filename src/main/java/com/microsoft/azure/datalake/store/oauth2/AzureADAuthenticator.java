@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
+import java.util.Hashtable;
 
 /**
  * This class provides convenience methods to obtain AAD tokens. While convenient, it is not necessary to
@@ -67,9 +68,13 @@ public class AzureADAuthenticator {
         QueryParams qp = new QueryParams();
         qp.add("authority", authority);
         qp.add("resource", resource);
+
+        Hashtable<String, String> headers = new Hashtable<String, String>();
+        headers.put("Metadata", "true");
+
         log.debug("AADToken: starting to fetch token using MSI for authority " + authority);
 
-        return getTokenCall(authEndpoint, qp.serialize());
+        return getTokenCall(authEndpoint, qp.serialize(), headers);
     }
 
     /**
@@ -126,14 +131,19 @@ public class AzureADAuthenticator {
         return getTokenCall(authEndpoint, qp.serialize());
     }
 
-    private static AzureADToken getTokenCall(String authEndpoint, String body)
-            throws IOException
-    {
+    private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers)
+            throws IOException {
         AzureADToken token;
 
         URL url = new URL(authEndpoint);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
+
+        if (headers!=null && headers.size() > 0) {
+            for (String name : headers.keySet()) {
+                conn.setRequestProperty(name, headers.get(name));
+            }
+        }
 
         conn.setDoOutput(true);
         conn.getOutputStream().write(body.getBytes("UTF-8"));
@@ -147,6 +157,12 @@ public class AzureADAuthenticator {
             throw new IOException("Failed to acquire token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
         }
         return token;
+    }
+
+    private static AzureADToken getTokenCall(String authEndpoint, String body)
+            throws IOException
+    {
+        return getTokenCall(authEndpoint, body, null);
     }
 
     private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {
