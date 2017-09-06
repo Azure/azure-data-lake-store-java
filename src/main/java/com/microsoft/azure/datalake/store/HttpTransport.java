@@ -333,6 +333,9 @@ class HttpTransport {
             resp.httpResponseCode = httpResponse.getStatusLine().getStatusCode();
             resp.httpResponseMessage = httpResponse.getStatusLine().getReasonPhrase();
             resp.requestId = httpResponse.getFirstHeader("x-ms-request-id").getValue();
+            if (httpResponse.containsHeader("x-ms-append-offset")) {
+                resp.committedBlockOffset = Long.parseLong(httpResponse.getFirstHeader("x-ms-append-offset").getValue());
+            }
             if (httpResponse.containsHeader("Content-Length")) {
                 resp.responseContentLength = Integer.parseInt(httpResponse.getFirstHeader("Content-Length").getValue());
             }

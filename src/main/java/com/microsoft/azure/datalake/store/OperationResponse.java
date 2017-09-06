@@ -52,6 +52,11 @@ public class OperationResponse {
     public String requestId = null;
 
     /**
+     * the offset of the last committed append block in the adl stream
+     */
+    public long committedBlockOffset = -1;
+
+    /**
      * the number of retries attempted before returning from the call
      */
     public int numRetries;

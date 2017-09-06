@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.UUID;
 
 /**
@@ -42,6 +44,25 @@ public class ADLFileOutputStream extends OutputStream {
     private boolean lastFlushUpdatedMetadata = false;
 
     HttpContext httpContext;
+    AdlBufferManager bufferManager = new AdlBufferManager(blocksize);
+
+    private class AppendBlock {
+        public AppendBlock(byte[] storage, int size, long offsetInStream, RequestOptions opts) {
+            this.blockStorage = storage;
+            this.blockSize = size;
+            this.offsetInStream = offsetInStream;
+            this.requestOptions = opts;
+        }
+
+        public byte[] blockStorage;
+        public int blockSize;
+        public long offsetInStream;
+        public RequestOptions requestOptions;
+    }
+
+    // Blocks that have been successfully queued on the server side with the PIPELINE flag
+    // but haven't been committed yet; these blocks might require to be retried
+    private LinkedList<AppendBlock> pendingBlocks = new LinkedList<>();
 
     // package-private constructor - use Factory Method in AzureDataLakeStoreClient
     ADLFileOutputStream(String filename,
@@ -108,7 +129,7 @@ public class ADLFileOutputStream extends OutputStream {
             log.trace("Stream write of size {} for client {} for file {}", len, client.getClientId(), filename);
         }
 
-        if (buffer == null) buffer = new byte[blocksize];
+        if (buffer == null) buffer = bufferManager.getBuffer();
 
         // if len > 4MB, then we force-break the write into 4MB chunks
         while (len > blocksize) {
@@ -153,41 +174,96 @@ public class ADLFileOutputStream extends OutputStream {
             if (cursor == 0 && (syncFlag==SyncFlag.DATA || syncFlag==SyncFlag.PIPELINE)) return;  // nothing to flush
             if (cursor == 0 && lastFlushUpdatedMetadata && syncFlag == SyncFlag.METADATA) return; // do not send a
                                                        // flush if the last flush updated metadata and there is no data
-            if (buffer == null) buffer = new byte[blocksize];
+            if (buffer == null) buffer = bufferManager.getBuffer();
             RequestOptions opts = new RequestOptions();
-            opts.retryPolicy = new ExponentialBackoffPolicy();
+            opts.retryPolicy = new NoRetryPolicy();
             OperationResponse resp = new OperationResponse();
             Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId,
                     leaseId, syncFlag, client, httpContext, opts, resp);
+
+            // If ever retry this block, use the exponential backoff policy
+            opts.retryPolicy = new ExponentialBackoffPolicy();
+
             if (!resp.successful) {
-                if (resp.numRetries > 0 && resp.httpResponseCode == 400 && "BadOffsetException".equals(resp.remoteExceptionName)) {
-                    // if this was a retry and we get bad offset, then this might be because we got a transient
-                    // failure on first try, but request succeeded on back-end. In that case, the retry would fail
-                    // with bad offset. To detect that, we check if there was a retry done, and if the current error we
-                    // have is bad offset.
-                    // If so, do a zero-length append at the current expected Offset, and if that succeeds,
-                    // then the file length must be good - swallow the error. If this append fails, then the last append
-                    // did not succeed and we have some other offset on server - bubble up the error.
-                    long expectedRemoteLength = remoteCursor + cursor;
-                    boolean append0Succeeded =  doZeroLengthAppend(expectedRemoteLength);
-                    if (append0Succeeded) {
-                        log.debug("zero-length append succeeded at expected offset (" + expectedRemoteLength + "), " +
-                                " ignoring BadOffsetException for session: " + leaseId + ", file: " + filename);
-                        remoteCursor += cursor;
-                        cursor = 0;
-                        lastFlushUpdatedMetadata = false;
-                        return;
-                    } else {
-                        log.debug("Append failed at expected offset(" + expectedRemoteLength +
-                                "). Bubbling exception up for session: " + leaseId + ", file: " + filename);
+
+                // Retry all pending blocks with SyncFlag.DATA
+                RetryPendingBlocks();
+
+                // Retry the current block, switching SyncFlag.PIPELINE to SyncFlag.DATA
+                OperationResponse retryResp = new OperationResponse();
+                Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId, leaseId,
+                        syncFlag == SyncFlag.PIPELINE ? SyncFlag.DATA : syncFlag, client, httpContext, opts, retryResp);
+
+                if (!retryResp.successful) {
+                    if (retryResp.numRetries > 0 && retryResp.httpResponseCode == 400 && "BadOffsetException".equals(retryResp.remoteExceptionName)) {
+                        // if this was a retry and we get bad offset, then this might be because we got a transient
+                        // failure on first try, but request succeeded on back-end. In that case, the retry would fail
+                        // with bad offset. To detect that, we check if there was a retry done, and if the current error we
+                        // have is bad offset.
+                        // If so, do a zero-length append at the current expected Offset, and if that succeeds,
+                        // then the file length must be good - swallow the error. If this append fails, then the last append
+                        // did not succeed and we have some other offset on server - bubble up the error.
+                        long expectedRemoteLength = remoteCursor + cursor;
+                        boolean append0Succeeded = doZeroLengthAppend(expectedRemoteLength);
+                        if (append0Succeeded) {
+                            log.debug("zero-length append succeeded at expected offset (" + expectedRemoteLength + "), " +
+                                    " ignoring BadOffsetException for session: " + leaseId + ", file: " + filename);
+                            remoteCursor += cursor;
+                            cursor = 0;
+                            lastFlushUpdatedMetadata = false;
+                            return;
+                        } else {
+                            log.debug("Append failed at expected offset(" + expectedRemoteLength +
+                                    "). Bubbling exception up for session: " + leaseId + ", file: " + filename);
+                        }
                     }
+                    throw client.getExceptionFromResponse(retryResp, "Error appending to file " + filename);
                 }
-                throw client.getExceptionFromResponse(resp, "Error appending to file " + filename);
+            } else {
+                if (syncFlag != SyncFlag.PIPELINE) {
+                    // Non pipelined append success implies all previous blocks must be committed
+                    pendingBlocks.clear();
+                } else {
+                    // Append succeeded, free all committed blocks
+                    FreeAppendBlocks(resp.committedBlockOffset);
+                }
             }
+
             remoteCursor += cursor;
             cursor = 0;
+            buffer = bufferManager.getBuffer();
             lastFlushUpdatedMetadata = (syncFlag == SyncFlag.METADATA || syncFlag == SyncFlag.CLOSE);
         }
+
+    private void RetryPendingBlocks() throws IOException {
+        ListIterator<AppendBlock> it = pendingBlocks.listIterator();
+        while (it.hasNext()) {
+            AppendBlock block = it.next();
+            OperationResponse resp = new OperationResponse();
+            Core.append(filename, block.offsetInStream, block.blockStorage, 0, block.blockSize, leaseId,
+                    leaseId, SyncFlag.DATA, client, httpContext, block.requestOptions, resp);
+
+            if (resp.successful || resp.httpResponseCode == 400 && "BadOffsetException".equals(resp.remoteExceptionName)) {
+                it.remove();
+                bufferManager.releaseBuffer(block.blockStorage);
+            } else {
+                throw client.getExceptionFromResponse(resp, "Error appending to file " + filename);
+            }
+        }
+    }
+
+    private void FreeAppendBlocks(long committedBlockOffset) {
+        ListIterator<AppendBlock> it = pendingBlocks.listIterator();
+        while (it.hasNext()) {
+            AppendBlock block = it.next();
+            if (block.offsetInStream <= committedBlockOffset) {
+                it.remove();
+                bufferManager.releaseBuffer(block.blockStorage);
+            } else {
+                break;
+            }
+        }
+    }
 
     private boolean doZeroLengthAppend(long offset) throws IOException {
         RequestOptions opts = new RequestOptions();
@@ -212,6 +288,7 @@ public class ADLFileOutputStream extends OutputStream {
             flush(SyncFlag.DATA);
         }
         blocksize = newSize;
+        bufferManager.setBufferSize(newSize);
         buffer = null;
     }
 
