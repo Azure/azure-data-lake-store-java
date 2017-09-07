@@ -34,7 +34,7 @@ public class AzureADAuthenticator {
      * gets Azure Active Directory token using the user ID and password of a service principal (that is, Web App
      * in Azure Active Directory).
      * <P>
-     * Azure Active Directory D allows users to set up a web app as a service principal. Users can optionally
+     * Azure Active Directory allows users to set up a web app as a service principal. Users can optionally
      * obtain service principal keys from AAD. This method gets a token using a service principal's client ID
      * and keys. In addition, it needs the token endpoint associated with the user's directory.
      * </P>
@@ -61,19 +61,32 @@ public class AzureADAuthenticator {
         return getTokenCall(authEndpoint, qp.serialize());
     }
 
+    /**
+     * Gets AAD token from the local virtual machine's VM extension. This only works on an Azure VM with MSI extension
+     * enabled.
+     *
+     * @param localPort port at which the MSI extension is running. If 0 or negative number is specified, then assume
+     *                  default port number of 50342.
+     * @param tenantGuid (optional) The guid of the AAD tenant. Can be {@code null}.
+     * @return {@link AzureADToken} obtained using the creds
+     * @throws IOException throws IOException if there is a failure in obtaining the token
+     */
     public static AzureADToken getTokenFromMsi(int localPort, String tenantGuid) throws IOException {
+        if (localPort <= 0) localPort = 50342;
         String authEndpoint  = "http://localhost:" + localPort + "/oauth2/token";
-        String authority = "https://login.microsoftonline.com/" + tenantGuid;
 
         QueryParams qp = new QueryParams();
-        qp.add("authority", authority);
         qp.add("resource", resource);
+
+        if (tenantGuid != null && tenantGuid.length() > 0) {
+            String authority = "https://login.microsoftonline.com/" + tenantGuid;
+            qp.add("authority", authority);
+        }
 
         Hashtable<String, String> headers = new Hashtable<String, String>();
         headers.put("Metadata", "true");
 
-        log.debug("AADToken: starting to fetch token using MSI for authority " + authority);
-
+        log.debug("AADToken: starting to fetch token using MSI");
         return getTokenCall(authEndpoint, qp.serialize(), headers);
     }
 

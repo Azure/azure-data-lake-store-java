@@ -1,5 +1,8 @@
 # Changes to the SDK
 
+### Version 2.2.3
+1. Made port number and tenant Guid optional for MsiTokenProvider.
+
 ### Version 2.2.2
 1. (internal-only fix, no user impact) Change MSI token acquisition call to add HTTP header (Metadata: true)
 

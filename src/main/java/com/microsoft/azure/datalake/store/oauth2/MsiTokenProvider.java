@@ -20,11 +20,30 @@ public class MsiTokenProvider extends AccessTokenProvider {
     private final int localPort;
     private final String tenantGuid;
 
+    /**
+     * Constructs a token provider that fetches tokens from the MSI token-service running on an Azure IaaS VM. This
+     * only works on an Azure VM with the MSI extansion enabled.
+     */
+    public MsiTokenProvider() {
+        this(-1, null);
+    }
 
     /**
-     * Constructs a token provider that fetches tokens from the MSI token-service running on an Azure IaaS VM
-     * @param localPort port on localhost for the MSI token service. (the port that was set in the deployment template)
-     * @param tenantGuid AAD Tenant ID ({@code guid})
+     * Constructs a token provider that fetches tokens from the MSI token-service running on an Azure IaaS VM. This
+     * only works on an Azure VM with the MSI extansion enabled.
+     * @param localPort port on localhost for the MSI token service. (the port that was set in the deployment template).
+     *                  If 0 or negative number is specified, then assume default port number of 50342.
+     */
+    public MsiTokenProvider(int localPort) {
+        this(localPort, null);
+    }
+
+    /**
+     * Constructs a token provider that fetches tokens from the MSI token-service running on an Azure IaaS VM. This
+     * only works on an Azure VM with the MSI extansion enabled.
+     * @param localPort port on localhost for the MSI token service. (the port that was set in the deployment template).
+     *                  If 0 or negative number is specified, then assume default port number of 50342.
+     * @param tenantGuid (optional) AAD Tenant ID {@code guid}. Can be {@code null}.
      */
     public MsiTokenProvider(int localPort, String tenantGuid) {
         this.localPort = localPort;
