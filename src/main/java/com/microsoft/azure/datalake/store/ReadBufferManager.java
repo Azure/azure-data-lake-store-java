@@ -8,7 +8,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Internal-use only; do not use.
@@ -227,7 +226,7 @@ class ReadBufferManager {
                 earliestBirthday = buf.birthday;
             }
         }
-        if ((System.currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null) )
+        if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null) )
         { return evict(nodeToEvict); }
 
         // nothing can be evicted
@@ -338,7 +337,7 @@ class ReadBufferManager {
             inProgressList.remove(buffer);
             if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
                 buffer.status = ReadBufferStatus.AVAILABLE;
-                buffer.birthday = System.currentTimeMillis();
+                buffer.birthday = currentTimeMillis();
                 buffer.length = bytesActuallyRead;
                 completedReadList.add(buffer);
             } else {
@@ -348,5 +347,18 @@ class ReadBufferManager {
         }
         //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
         buffer.latch.countDown(); // wake up waiting threads (if any)
+    }
+
+
+    /**
+     * Similar to System.currentTimeMillis, except implemented with System.nanoTime().
+     * System.currentTimeMillis can go backwards when system clock is changed (e.g., with NTP time synchronization),
+     * making it unsuitable for measuring time intervals. nanotime is strictly monotonically increasing,
+     * so it is much more suitable to measuring intervals.
+     *
+     * @return current time in milliseconds
+     */
+    private long currentTimeMillis() {
+        return System.nanoTime() / 1000/ 1000;
     }
 }

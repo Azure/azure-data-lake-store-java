@@ -1,6 +1,10 @@
 # Changes to the SDK
 
 ### Version 2.3.0-preview1
+1. Changed REST API version to 2017-08-01 (required for read-aheads)
+2. Internal bug fixes
+
+### Version 2.3.0-preview1
 1. ADLInputStream can now optionally do read-ahead (on by default, with queue depth=4). Added 
    configuration option to ADLStoreOptions to set the queue depth for read-ahead.
 

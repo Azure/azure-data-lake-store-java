@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 class HttpTransport {
 
-    private static final String API_VERSION = "2016-11-01"; // API version used in REST requests
+    private static final String API_VERSION = "2017-08-01"; // API version used in REST requests
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport");
     private static final Logger tokenlog = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport.tokens");
 

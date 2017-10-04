@@ -7,6 +7,7 @@
 package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,7 +236,7 @@ public class ADLFileInputStream extends InputStream {
 
         byte[] junkbuffer = new byte[16*1024];
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = speculative ? new NoRetryPolicy() : new ExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         InputStream inStream = Core.open(filename, position, length, sessionId, speculative, client, opts, resp);
         if (speculative && !resp.successful && resp.httpResponseCode == 400 && resp.remoteExceptionName.equals("SpeculativeReadNotSupported")) {
