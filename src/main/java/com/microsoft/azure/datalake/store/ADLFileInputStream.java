@@ -259,22 +259,30 @@ public class ADLFileInputStream extends InputStream {
                 while (inStream.read(junkbuffer, 0, junkbuffer.length)>=0); // read and consume rest of stream, if any remains
             }
         } catch (IOException ex) {
-            throw new ADLException("Error reading data from response stream in positioned read() for file " + filename, ex);
+            String requestDebugDetails = getRequestDebugDetails(opts, resp,
+                (System.nanoTime() - start) / 1000000, totalBytesRead, position);
+            throw new ADLException("Error reading data from response stream in positioned read() for file " +
+                filename + ". Details " + requestDebugDetails, ex);
         } finally {
             if (inStream != null) inStream.close();
             long timeTaken=(System.nanoTime() - start)/1000000;
             if (log.isDebugEnabled()) {
-                String logline ="HTTPRequestRead," + (resp.successful?"Succeeded":"Failed") +
-                        ",cReqId:" + opts.requestid +
-                        ",lat:" + Long.toString(resp.lastCallLatency+timeTaken) +
-                        ",Reqlen:" + totalBytesRead +
-                        ",sReqId:" + resp.requestId +
-                        ",path:" + filename +
-                        ",offset:" + position;
+                String logline = getRequestDebugDetails(opts, resp, timeTaken, totalBytesRead, position);
                 log.debug(logline);
             }
         }
         return totalBytesRead;
+    }
+
+    private String getRequestDebugDetails(RequestOptions reqOpts, OperationResponse resp,
+        long timeTaken, int totalBytesRead, long position) {
+        return "HTTPRequestRead," + (resp.successful?"Succeeded":"Failed") +
+                              ",cReqId:" + reqOpts.requestid +
+                              ",lat:" + Long.toString(resp.lastCallLatency+timeTaken) +
+                              ",Reqlen:" + totalBytesRead +
+                              ",sReqId:" + resp.requestId +
+                              ",path:" + filename +
+                              ",offset:" + position;
     }
 
 
