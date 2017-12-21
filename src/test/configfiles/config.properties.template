@@ -16,3 +16,4 @@ PositionedReadsTestsEnabled=true
 acl.AclActionTestsEnabled=true
 acl.AclEntryTestsEnabled=true
 acl.AclSpecTestsEnabled=true
+LongRunningTestsEnabled=false

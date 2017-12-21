@@ -7,7 +7,6 @@
 package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +34,9 @@ public class ADLFileInputStream extends InputStream {
     private final ADLStoreClient client;
     private final DirectoryEntry directoryEntry;
     private final String sessionId = UUID.randomUUID().toString();
-    private static final int defaultQueueDepth = 4;  // need to experiment to see what is a good number
 
     private int blocksize = 4 * 1024 * 1024; // 4MB default buffer size
-    private byte[] buffer = null;            // will be initialized on first use
-    private int readAheadQueueDepth;         // initialized in constructor
+    private byte[] buffer = null;   // will be initialized on first use
 
     private long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
     private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
@@ -54,8 +51,6 @@ public class ADLFileInputStream extends InputStream {
         this.filename = filename;
         this.client = client;
         this.directoryEntry = de;
-        int requestedQD = client.getReadAheadQueueDepth();
-        this.readAheadQueueDepth = (requestedQD >= 0) ? requestedQD : defaultQueueDepth;
         if (log.isTraceEnabled()) {
             log.trace("ADLFIleInputStream created for client {} for file {}", client.getClientId(), filename);
         }
@@ -129,7 +124,7 @@ public class ADLFileInputStream extends InputStream {
         limit = 0;
         if (buffer == null) buffer = new byte[blocksize];
 
-        int bytesRead = readInternal(fCursor, buffer, 0, blocksize, false);
+        int bytesRead = readInternal(fCursor, buffer, 0, blocksize);
         limit += bytesRead;
         fCursor += bytesRead;
         return bytesRead;
@@ -160,7 +155,7 @@ public class ADLFileInputStream extends InputStream {
 
         // if one OPEN request doesnt get full file, then read again at fCursor
         while (fCursor < directoryEntry.length) {
-            int bytesRead = readInternal(fCursor, buffer, limit, blocksize - limit, true);
+            int bytesRead = readInternal(fCursor, buffer, limit, blocksize - limit);
             limit += bytesRead;
             fCursor += bytesRead;
 
@@ -190,42 +185,11 @@ public class ADLFileInputStream extends InputStream {
         if (log.isTraceEnabled()) {
             log.trace("ADLFileInputStream positioned read() - at offset {} using client {} from file {}", position, client.getClientId(), filename);
         }
-        return readInternal(position, b, offset, length, true);
+
+        return readInternal(position, b, offset, length);
     }
 
-    private int readInternal(long position, byte[] b, int offset, int length, boolean bypassReadAhead) throws IOException {
-        boolean readAheadEnabled = true;
-        if (readAheadEnabled && !bypassReadAhead && !client.disableReadAheads) {
-            // try reading from read-ahead
-            if (offset != 0) throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
-            int receivedBytes;
-
-            // queue read-aheads
-            int numReadAheads = this.readAheadQueueDepth;
-            long nextSize;
-            long nextOffset = position;
-            while (numReadAheads > 0 && nextOffset < directoryEntry.length) {
-                nextSize = Math.min( (long)blocksize, directoryEntry.length-nextOffset);
-                if (log.isTraceEnabled())
-                    log.trace("Queueing readAhead for file " + filename + " offset " + nextOffset + " thread " + Thread.currentThread().getName());
-                ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
-                nextOffset = nextOffset + nextSize;
-                numReadAheads--;
-            }
-
-            // try reading from buffers first
-            receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
-            if (receivedBytes > 0) return receivedBytes;
-
-            // got nothing from read-ahead, do our own read now
-            receivedBytes = readRemote(position, b, offset, length, false);
-            return receivedBytes;
-        } else {
-            return readRemote(position, b, offset, length, false);
-        }
-    }
-
-    int readRemote(long position, byte[] b, int offset, int length, boolean speculative) throws IOException {
+    private int readInternal(long position, byte[] b, int offset, int length) throws IOException {
         if (position < 0) throw new IllegalArgumentException("attempting to read from negative offset");
         if (position >= directoryEntry.length) return -1;  // Hadoop prefers -1 to EOFException
         if (b == null) throw new IllegalArgumentException("null byte array passed in to read() method");
@@ -234,44 +198,49 @@ public class ADLFileInputStream extends InputStream {
         if (length > (b.length - offset))
             throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
 
-        byte[] junkbuffer = new byte[16*1024];
-        RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = speculative ? new NoRetryPolicy() : new ExponentialBackoffPolicy();
-        OperationResponse resp = new OperationResponse();
-        InputStream inStream = Core.open(filename, position, length, sessionId, speculative, client, opts, resp);
-        if (speculative && !resp.successful && resp.httpResponseCode == 400 && resp.remoteExceptionName.equals("SpeculativeReadNotSupported")) {
-            client.disableReadAheads = true;
-            return 0;
-        }
-        if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
-        if (resp.responseContentLength == 0 && !resp.responseChunked) return 0;  //Got nothing
-        int bytesRead;
         int totalBytesRead = 0;
-        long start = System.nanoTime();
-        try {
-            do {
-                bytesRead = inStream.read(b, offset + totalBytesRead, length - totalBytesRead);
-                if (bytesRead > 0) { // if not EOF of the Core.open's stream
-                    totalBytesRead += bytesRead;
+        int retriesRemaining = 1;
+        // retry is for the HTTP call succeeding, but the InputStream subsequently having an error.
+        // If the http call fails, the retry policy takes care of it
+
+        while (retriesRemaining >= 0) {
+            byte[] junkbuffer = new byte[16 * 1024];
+            RequestOptions opts = new RequestOptions();
+            opts.retryPolicy = new ExponentialBackoffPolicy();
+            opts.timeout = client.timeout + (1000 * (length / 1000 /1000)); // 1 second grace per MB to be downloaded
+            OperationResponse resp = new OperationResponse();
+            InputStream inStream = Core.open(filename, position, length, sessionId, client, opts, resp);
+            if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
+            if (resp.responseContentLength == 0 && !resp.responseChunked) return 0;  //Got nothing
+            int bytesRead;
+            totalBytesRead = 0;
+            try {
+                do {
+                    bytesRead = inStream.read(b, offset + totalBytesRead, length - totalBytesRead);
+                    if (bytesRead > 0) { // if not EOF of the Core.open's stream
+                        totalBytesRead += bytesRead;
+                    }
+                } while (bytesRead >= 0 && totalBytesRead < length);
+                if (bytesRead >= 0) {  // read to EOF on the stream, so connection can be reused
+                    while (inStream.read(junkbuffer, 0, junkbuffer.length) >= 0)
+                        ; // read and consume rest of stream, if any remains
                 }
-            } while (bytesRead >= 0 && totalBytesRead < length);
-            if (bytesRead >= 0) {  // read to EOF on the stream, so connection can be reused
-                while (inStream.read(junkbuffer, 0, junkbuffer.length)>=0); // read and consume rest of stream, if any remains
-            }
-        } catch (IOException ex) {
-            throw new ADLException("Error reading data from response stream in positioned read() for file " + filename, ex);
-        } finally {
-            if (inStream != null) inStream.close();
-            long timeTaken=(System.nanoTime() - start)/1000000;
-            if (log.isDebugEnabled()) {
-                String logline ="HTTPRequestRead," + (resp.successful?"Succeeded":"Failed") +
-                        ",cReqId:" + opts.requestid +
-                        ",lat:" + Long.toString(resp.lastCallLatency+timeTaken) +
-                        ",Reqlen:" + totalBytesRead +
-                        ",sReqId:" + resp.requestId +
-                        ",path:" + filename +
-                        ",offset:" + position;
-                log.debug(logline);
+                return totalBytesRead;
+            } catch (IOException ex) {
+                inStream.close();
+                if (totalBytesRead > 0) {
+                    return totalBytesRead;
+                } else {
+                    // we could also just return zero bytes read and not do the retry - that would satisfy the InputStream contract
+                    // But that is almost never the intent, so just doing the try internally if zero bytes have been read
+                    if (retriesRemaining == 0) {
+                        throw new ADLException("Error reading data from response stream in positioned read() for file " + filename, ex);
+                    } else {
+                        retriesRemaining--;
+                    }
+                }
+            } finally {
+                if (inStream != null) inStream.close();
             }
         }
         return totalBytesRead;
@@ -347,16 +316,6 @@ public class ADLFileInputStream extends InputStream {
     }
 
     /**
-     * Sets the Queue depth to be used for read-aheads in this stream.
-     *
-     * @param queueDepth the desired queue depth, set to 0 to disable read-ahead
-     */
-    public void setReadAheadQueueDepth(int queueDepth) {
-        if (queueDepth < 0) throw new IllegalArgumentException("Queue depth has to be 0 or more");
-        this.readAheadQueueDepth = queueDepth;
-    }
-
-    /**
      * returns the remaining number of bytes available to read from the buffer, without having to call
      * the server
      *
@@ -412,11 +371,6 @@ public class ADLFileInputStream extends InputStream {
         }
         streamClosed = true;
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    }
-
-
-    public String getFilename() {
-        return this.filename;
     }
 
     /**

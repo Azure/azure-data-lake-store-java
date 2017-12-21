@@ -254,10 +254,7 @@ public class TestFileSdk {
         // verify what was read is identical to what was written
         assertTrue("file length should match what was written", contents.length == count);
         byte[] b2 = Arrays.copyOfRange(b1, 0, count);
-        for (int i = 0; i < contents.length; i++ ) {
-            assertTrue("file contents should match; mismatch detected at offset " + i, b2[i] == contents[i]);
-        }
-        //assertTrue("file contents should match", Arrays.equals(contents, b2));
+        assertTrue("file contents should match", Arrays.equals(contents, b2));
     }
 
     @Test

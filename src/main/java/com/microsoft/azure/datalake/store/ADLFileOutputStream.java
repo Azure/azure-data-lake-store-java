@@ -151,6 +151,7 @@ public class ADLFileOutputStream extends OutputStream {
             if (buffer == null) buffer = new byte[blocksize];
             RequestOptions opts = new RequestOptions();
             opts.retryPolicy = new ExponentialBackoffPolicy();
+            opts.timeout = client.timeout + (1000 + (buffer.length / 1000 / 1000)); // 1 second grace per MB to upload
             OperationResponse resp = new OperationResponse();
             Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId,
                     leaseId, syncFlag, client, opts, resp);

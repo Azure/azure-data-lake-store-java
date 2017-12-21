@@ -26,6 +26,7 @@ public class TestSdkMock {
     private String directory = "/mockTestDirectory";
     private ADLStoreClient client = null;
     private boolean testsEnabled = true;
+    private boolean longRunningEnabled = true;
     MockWebServer server = null;
 
     @Before
@@ -44,6 +45,7 @@ public class TestSdkMock {
         client.setOptions(new ADLStoreOptions().setInsecureTransport());
 
         testsEnabled = Boolean.parseBoolean(prop.getProperty("MockTestsEnabled", "true"));
+        longRunningEnabled = Boolean.parseBoolean(prop.getProperty("LongRunningTestsEnabled", "true"));
     }
 
     @After
@@ -54,6 +56,7 @@ public class TestSdkMock {
     @Test
     public void testExponentialRetryTiming() throws IOException {
         Assume.assumeTrue(testsEnabled);
+        Assume.assumeTrue(longRunningEnabled);
         String filename = directory + "/" + "Mock.testExponentialRetryTiming";
 
         MockResponse gfsResponse = (new MockResponse()).setResponseCode(503);

@@ -21,6 +21,7 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
     private int maxRetries = 4;
     private int exponentialRetryInterval = 1000;
     private int exponentialFactor = 4;
+    private long lastAttemptStartTime = System.nanoTime();
 
     public ExponentialBackoffPolicy() {
     }
@@ -54,9 +55,11 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
                                  || httpResponseCode == 429
                                  || httpResponseCode == 401) {
             if (retryCount < maxRetries) {
-                wait(exponentialRetryInterval);
+                int timeSpent = (int)((System.nanoTime() - lastAttemptStartTime) / 1000000);
+                wait(exponentialRetryInterval - timeSpent);
                 exponentialRetryInterval *= exponentialFactor;
                 retryCount++;
+                lastAttemptStartTime = System.nanoTime();
                 return true;
             } else {
                 return false;  // max # of retries exhausted
@@ -74,6 +77,10 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
     }
 
     private void wait(int milliseconds) {
+        if (milliseconds <= 0) {
+            return;
+        }
+
         try {
             Thread.sleep(milliseconds);
         } catch (InterruptedException ex) {

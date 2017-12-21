@@ -15,7 +15,7 @@ public class ADLStoreOptions {
     private boolean insecureTransport = false;
     private boolean enableRemoteExceptions = false;
     private String pathPrefix = null;
-    private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
+    private int defaultTimeout = -1;
 
     public ADLStoreOptions() {
     }
@@ -113,23 +113,21 @@ public class ADLStoreOptions {
     }
 
     /**
-     * Sets the default Queue depth to be used for read-aheads in {@link ADLFileInputStream}.
-     *
-     * @param queueDepth the desired queue depth, set to 0 to disable read-ahead
+     * sets the default timeout for calls make by methods in ADLStoreClient objects
+     * @param defaultTimeoutInMillis default timeout, in Milliseconds
      * @return {@code this}
      */
-    public ADLStoreOptions setReadAheadQueueDepth(int queueDepth) {
-        if (queueDepth < 0) throw new IllegalArgumentException("Queue depth has to be 0 or more");
-        this.readAheadQueueDepth = queueDepth;
+    public ADLStoreOptions setDefaultTimeout(int defaultTimeoutInMillis) {
+        this.defaultTimeout = defaultTimeoutInMillis;
         return this;
     }
 
     /**
-     * Gets the default Queue depth used for read-aheads in {@link ADLFileInputStream}
-     * @return the queue depth
+     * gets the default timeout for calls make by methods in ADLStoreClient objects
+     * @return default timeout, in Milliseconds
      */
-    int getReadAheadQueueDepth() {
-        return this.readAheadQueueDepth;
+    int getDefaultTimeout() {
+        return this.defaultTimeout;
     }
 
 }
