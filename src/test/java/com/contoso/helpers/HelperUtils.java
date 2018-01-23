@@ -9,12 +9,10 @@ package com.contoso.helpers;
 
 import com.microsoft.azure.datalake.store.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
 
 import java.io.*;
 import java.security.SecureRandom;
 import java.util.Properties;
-import java.util.UUID;
 
 public class HelperUtils {
 

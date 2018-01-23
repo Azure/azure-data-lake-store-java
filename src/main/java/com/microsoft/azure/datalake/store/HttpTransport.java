@@ -10,7 +10,7 @@ package com.microsoft.azure.datalake.store;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,7 +69,7 @@ class HttpTransport {
 
 
         if (opts.retryPolicy == null) {
-            opts.retryPolicy = new NoRetryPolicy();
+            opts.retryPolicy = new NonIdempotentRetryPolicy();
         }
 
         String clientRequestId;

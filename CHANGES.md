@@ -1,5 +1,8 @@
 # Changes to the SDK
 
+### Version 2.2.5
+1. Made HTTP 429 error retry-able on non-idempotent calls, since HTTP429 does not make a state change on the server
+
 ### Version 2.2.4
 1. Made timeouts more aggressive, and made the ADLStoreClient's default timeout configurable (`ADLStoreOptions.setDefaultTimeout`)
 2. Do automatic retry for the case where a read requests succeeds, but then reading the content stream a fails because of network issue

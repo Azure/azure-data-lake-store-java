@@ -11,7 +11,7 @@ import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -272,7 +272,7 @@ public class ADLStoreClient {
         String leaseId = UUID.randomUUID().toString();
         boolean overwrite = (mode==IfExists.OVERWRITE);
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NoRetryPolicy();
+        opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,

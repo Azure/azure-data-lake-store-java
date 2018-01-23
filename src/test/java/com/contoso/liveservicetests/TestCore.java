@@ -11,7 +11,7 @@ import com.microsoft.azure.datalake.store.*;
 import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
 import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
 
-import com.microsoft.azure.datalake.store.retrypolicies.NoRetryPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -96,7 +96,7 @@ public class TestCore {
 
         byte [] contents = null;
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, 0, true,
                 client, opts, resp);
@@ -121,7 +121,7 @@ public class TestCore {
 
         byte [] contents = new byte[0];
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, 0, true,
                 client, opts, resp);
@@ -146,7 +146,7 @@ public class TestCore {
 
         byte [] contents = HelperUtils.getSampleText1();
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, true,
                 client, opts, resp);
@@ -174,7 +174,7 @@ public class TestCore {
 
         byte [] contents = HelperUtils.getSampleText1();
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, false,
                 client, opts, resp);
@@ -195,7 +195,7 @@ public class TestCore {
 
         byte [] contents = HelperUtils.getSampleText1();
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, true,
                 client, opts, resp);
@@ -206,7 +206,7 @@ public class TestCore {
 
         contents = HelperUtils.getSampleText2();
         opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         resp = new OperationResponse();
         Core.concurrentAppend(filename, contents, 0, contents.length, false,
                 client, opts, resp);
@@ -326,7 +326,7 @@ public class TestCore {
 
     private DirectoryEntry dir(String filename) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new NoRetryPolicy();
+        opts.retryPolicy = new NonIdempotentRetryPolicy();
         OperationResponse resp = new OperationResponse();
         DirectoryEntry de = Core.getFileStatus(filename, UserGroupRepresentation.OID, client, opts, resp);
         if (!resp.successful) {
