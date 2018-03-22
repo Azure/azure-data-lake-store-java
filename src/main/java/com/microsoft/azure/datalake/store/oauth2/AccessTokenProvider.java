@@ -74,7 +74,6 @@ public abstract class AccessTokenProvider {
             log.debug("AADToken: token expiring: " + token.expiry.toString() + " : Five-minute window: " + new Date(approximatelyNow).toString());
         }
 
-
         return expiring;
     }
     private static final long FIVE_MINUTES = 300 * 1000; // 5 minutes in milliseconds

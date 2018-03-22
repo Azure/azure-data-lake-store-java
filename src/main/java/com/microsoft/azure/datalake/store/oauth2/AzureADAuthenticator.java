@@ -9,6 +9,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.microsoft.azure.datalake.store.QueryParams;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +60,16 @@ public class AzureADAuthenticator {
         qp.add("client_secret", clientSecret);
         log.debug("AADToken: starting to fetch token using client creds for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize());
+        return getTokenCall(authEndpoint, qp.serialize(), null);
     }
+
 
     /**
      * Gets AAD token from the local virtual machine's VM extension. This only works on an Azure VM with MSI extension
      * enabled.
+     *
+     * @deprecated  Deprecated, use the other overloads instead. With the change to the way MSI is done in
+     * Azure Active Directory, the parameters on this call (localPort) are not relevant anymore.
      *
      * @param localPort port at which the MSI extension is running. If 0 or negative number is specified, then assume
      *                  default port number of 50342.
@@ -71,16 +77,41 @@ public class AzureADAuthenticator {
      * @return {@link AzureADToken} obtained using the creds
      * @throws IOException throws IOException if there is a failure in obtaining the token
      */
+    @Deprecated
     public static AzureADToken getTokenFromMsi(int localPort, String tenantGuid) throws IOException {
-        if (localPort <= 0) localPort = 50342;
-        String authEndpoint  = "http://localhost:" + localPort + "/oauth2/token";
+        return getTokenFromMsi(tenantGuid, null, false);
+    }
+
+    /**
+     * Gets AAD token from the local virtual machine's VM extension. This only works on an Azure VM with MSI extension
+     * enabled.
+     *
+     * @param tenantGuid (optional) The guid of the AAD tenant. Can be {@code null}.
+     * @param clientId (optional) The clientId guid of the MSI service principal to use. Can be {@code null}.
+     * @param bypassCache {@code boolean} specifying whether a cached token is acceptable or a fresh token
+     *                                   request should me made to AAD
+     * @return {@link AzureADToken} obtained using the creds
+     * @throws IOException throws IOException if there is a failure in obtaining the token
+     */
+    public static AzureADToken getTokenFromMsi(String tenantGuid, String clientId, boolean bypassCache) throws IOException {
+        String authEndpoint  = "http://169.254.169.254/metadata/identity/oauth2/token";
 
         QueryParams qp = new QueryParams();
+        qp.add("api-version", "2018-02-01");
         qp.add("resource", resource);
+
 
         if (tenantGuid != null && tenantGuid.length() > 0) {
             String authority = "https://login.microsoftonline.com/" + tenantGuid;
             qp.add("authority", authority);
+        }
+
+        if (clientId != null && clientId.length() > 0) {
+            qp.add("client_id", clientId);
+        }
+
+        if (bypassCache) {
+            qp.add("bypass_cache", "true");
         }
 
         Hashtable<String, String> headers = new Hashtable<String, String>();
@@ -109,7 +140,7 @@ public class AzureADAuthenticator {
         if (clientId != null) qp.add("client_id", clientId);
         log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize());
+        return getTokenCall(authEndpoint, qp.serialize(), null);
     }
 
     /**
@@ -118,8 +149,9 @@ public class AzureADAuthenticator {
      * not work if the domain is federated and/or multi-factor authentication or other form of
      * strong authentication is configured for the user.
      * <P>
-     * Due to security concerns with user ID and password,this should only be used in limited test
-     * circumstances, and for test/dummy users only.
+     * @deprecated
+     * Due to security concerns with user ID and password,this auth method is deprecated. Please use
+     * device code authentication instead for interactive user-based authentication.
      * </P>
      * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
      * @param username the user name of the user
@@ -127,6 +159,7 @@ public class AzureADAuthenticator {
      * @return {@link AzureADToken} obtained using the user's creds
      * @throws IOException throws IOException if there is a failure in connecting to Azure AD
      */
+    @Deprecated
     public static AzureADToken getTokenUsingUserCreds(String clientId, String username, String password)
             throws IOException
     {
@@ -141,41 +174,91 @@ public class AzureADAuthenticator {
         qp.add("password",password);
         log.debug("AADToken: starting to fetch token using username for user " + username );
 
-        return getTokenCall(authEndpoint, qp.serialize());
+        return getTokenCall(authEndpoint, qp.serialize(), null);
+    }
+
+    private static class HttpException extends IOException {
+        public int httpErrorCode;
+        public String requestId;
+
+        public HttpException(int httpErrorCode, String requestId, String message) {
+            super(message);
+            this.httpErrorCode = httpErrorCode;
+            this.requestId = requestId;
+        }
     }
 
     private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers)
             throws IOException {
-        AzureADToken token;
+        AzureADToken token = null;
+        RetryPolicy retryPolicy = new ExponentialBackoffPolicy(3, 0, 1000, 2);
 
-        URL url = new URL(authEndpoint);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
+        int httperror = 0;
+        String requestId;
+        IOException ex = null;
+        boolean succeeded = false;
 
-        if (headers!=null && headers.size() > 0) {
-            for (String name : headers.keySet()) {
-                conn.setRequestProperty(name, headers.get(name));
+        do {
+            httperror = 0;
+            requestId = "";
+            ex = null;
+            try {
+                token = getTokenSingleCall(authEndpoint, body, headers);
+            } catch (HttpException e) {
+                httperror = e.httpErrorCode;
+                requestId = e.requestId;
+            }  catch (IOException e) {
+                ex = e;
             }
-        }
-
-        conn.setDoOutput(true);
-        conn.getOutputStream().write(body.getBytes("UTF-8"));
-
-        int httpResponseCode = conn.getResponseCode();
-        if (httpResponseCode == 200) {
-            InputStream httpResponseStream = conn.getInputStream();
-            token = parseTokenFromStream(httpResponseStream);
-        } else {
-            log.debug("AADToken: HTTP connection failed for getting token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
-            throw new IOException("Failed to acquire token from AzureAD. Http response: " + httpResponseCode + " " + conn.getResponseMessage());
+            succeeded = ((httperror == 0) && (ex == null));
+        } while (!succeeded && retryPolicy.shouldRetry(httperror, ex));
+        if (!succeeded) {
+            if (ex != null) throw ex;
+            if (httperror!=0) throw new IOException("HTTP Error requesting token: "
+                    + httperror
+                    + " [requestId: " + requestId + "]");
         }
         return token;
     }
 
-    private static AzureADToken getTokenCall(String authEndpoint, String body)
-            throws IOException
-    {
-        return getTokenCall(authEndpoint, body, null);
+    private static AzureADToken getTokenSingleCall(String authEndpoint, String body, Hashtable<String, String> headers)
+            throws IOException {
+
+        AzureADToken token = null;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(authEndpoint);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setReadTimeout(30000);
+            conn.setConnectTimeout(30000);
+
+            if (headers != null && headers.size() > 0) {
+                for (String name : headers.keySet()) {
+                    conn.setRequestProperty(name, headers.get(name));
+                }
+            }
+            conn.setRequestProperty("Connection", "close");
+
+            conn.setDoOutput(true);
+            conn.getOutputStream().write(body.getBytes("UTF-8"));
+
+            int httpResponseCode = conn.getResponseCode();
+            String requestId = conn.getHeaderField("x-ms-request-id");
+            requestId = requestId == null ? "" : requestId;
+            if (httpResponseCode == 200) {
+                InputStream httpResponseStream = conn.getInputStream();
+                token = parseTokenFromStream(httpResponseStream);
+            } else {
+                log.debug("AADToken: HTTP connection failed for getting token from AzureAD. Http response: "
+                        + httpResponseCode + " " + conn.getResponseMessage()
+                        + "[" + requestId + "]");
+                throw new HttpException(httpResponseCode, requestId, conn.getResponseMessage());
+            }
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return token;
     }
 
     private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {

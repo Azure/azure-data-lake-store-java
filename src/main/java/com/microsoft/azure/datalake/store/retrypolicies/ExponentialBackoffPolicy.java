@@ -28,12 +28,19 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
 
     /**
      * @param maxRetries maximum number of retries
-     * @param linearRetryInterval interval to use for linear retries (in milliseconds)
+     * @param linearRetryInterval interval to use for linear retries (in milliseconds).
+     *                            Deprecated, not used in the retry policy.
      * @param exponentialRetryInterval (starting) interval to use for exponential backoff retries (in milliseconds)
      */
-    public ExponentialBackoffPolicy(int maxRetries, int linearRetryInterval, int exponentialRetryInterval) {
+    public ExponentialBackoffPolicy(int maxRetries, @Deprecated int linearRetryInterval, int exponentialRetryInterval) {
         this.maxRetries = maxRetries;
         this.exponentialRetryInterval = exponentialRetryInterval;
+    }
+
+    public ExponentialBackoffPolicy(int maxRetries, @Deprecated int linearRetryInterval, int exponentialRetryInterval, int exponentialFactor) {
+        this.maxRetries = maxRetries;
+        this.exponentialRetryInterval = exponentialRetryInterval;
+        this.exponentialFactor = exponentialFactor;
     }
 
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {

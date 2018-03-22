@@ -1,5 +1,9 @@
 # Changes to the SDK
 
+### Version 2.2.6
+1. Changed implementation of the MSI token provider to use the new IMDS REST endpoint required by AAD 
+2. Made AAD token acquisition more robust - added timeout, retry, disable keep-alive, improved exception text
+
 ### Version 2.2.5
 1. Made HTTP 429 error retry-able on non-idempotent calls, since HTTP429 does not make a state change on the server
 
