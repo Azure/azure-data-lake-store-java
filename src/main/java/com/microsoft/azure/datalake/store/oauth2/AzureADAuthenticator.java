@@ -60,7 +60,7 @@ public class AzureADAuthenticator {
         qp.add("client_secret", clientSecret);
         log.debug("AADToken: starting to fetch token using client creds for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null);
     }
 
 
@@ -118,7 +118,7 @@ public class AzureADAuthenticator {
         headers.put("Metadata", "true");
 
         log.debug("AADToken: starting to fetch token using MSI");
-        return getTokenCall(authEndpoint, qp.serialize(), headers);
+        return getTokenCall(authEndpoint, qp.serialize(), headers, "GET");
     }
 
     /**
@@ -140,7 +140,7 @@ public class AzureADAuthenticator {
         if (clientId != null) qp.add("client_id", clientId);
         log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null);
     }
 
     /**
@@ -174,7 +174,7 @@ public class AzureADAuthenticator {
         qp.add("password",password);
         log.debug("AADToken: starting to fetch token using username for user " + username );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null);
     }
 
     private static class HttpException extends IOException {
@@ -188,13 +188,14 @@ public class AzureADAuthenticator {
         }
     }
 
-    private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers)
+    private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers, String httpMethod)
             throws IOException {
         AzureADToken token = null;
         RetryPolicy retryPolicy = new ExponentialBackoffPolicy(3, 0, 1000, 2);
 
         int httperror = 0;
         String requestId;
+        String httpExceptionMessage = null;
         IOException ex = null;
         boolean succeeded = false;
 
@@ -203,10 +204,11 @@ public class AzureADAuthenticator {
             requestId = "";
             ex = null;
             try {
-                token = getTokenSingleCall(authEndpoint, body, headers);
+                token = getTokenSingleCall(authEndpoint, body, headers, httpMethod);
             } catch (HttpException e) {
                 httperror = e.httpErrorCode;
                 requestId = e.requestId;
+                httpExceptionMessage = e.getMessage();
             }  catch (IOException e) {
                 ex = e;
             }
@@ -214,22 +216,27 @@ public class AzureADAuthenticator {
         } while (!succeeded && retryPolicy.shouldRetry(httperror, ex));
         if (!succeeded) {
             if (ex != null) throw ex;
-            if (httperror!=0) throw new IOException("HTTP Error requesting token: "
-                    + httperror
-                    + " [requestId: " + requestId + "]");
+            if (httperror!=0) throw new IOException(httpExceptionMessage);
         }
         return token;
     }
 
-    private static AzureADToken getTokenSingleCall(String authEndpoint, String body, Hashtable<String, String> headers)
+    private static AzureADToken getTokenSingleCall(String authEndpoint, String payload, Hashtable<String, String> headers, String httpMethod)
             throws IOException {
 
         AzureADToken token = null;
         HttpURLConnection conn = null;
+        String urlString = authEndpoint;
+
+        httpMethod = (httpMethod == null) ? "POST" : httpMethod;
+        if (httpMethod.equals("GET")) {
+            urlString = urlString + "?" + payload;
+        }
+
         try {
-            URL url = new URL(authEndpoint);
+            URL url = new URL(urlString);
             conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
+            conn.setRequestMethod(httpMethod);
             conn.setReadTimeout(30000);
             conn.setConnectTimeout(30000);
 
@@ -240,20 +247,38 @@ public class AzureADAuthenticator {
             }
             conn.setRequestProperty("Connection", "close");
 
-            conn.setDoOutput(true);
-            conn.getOutputStream().write(body.getBytes("UTF-8"));
+            if (httpMethod.equals("POST")) {
+                conn.setDoOutput(true);
+                conn.getOutputStream().write(payload.getBytes("UTF-8"));
+            }
 
             int httpResponseCode = conn.getResponseCode();
             String requestId = conn.getHeaderField("x-ms-request-id");
+            String responseContentType = conn.getHeaderField("Content-Type");
+            long responseContentLength = conn.getHeaderFieldLong("Content-Length", 0);
+
             requestId = requestId == null ? "" : requestId;
-            if (httpResponseCode == 200) {
+            if (httpResponseCode == 200 && responseContentType.startsWith("application/json") && responseContentLength > 0) {
                 InputStream httpResponseStream = conn.getInputStream();
                 token = parseTokenFromStream(httpResponseStream);
             } else {
-                log.debug("AADToken: HTTP connection failed for getting token from AzureAD. Http response: "
+                String responseBody = consumeInputStream(conn.getInputStream(), 1024);
+                String proxies = "none";
+                String httpProxy=System.getProperty("http.proxy");
+                String httpsProxy=System.getProperty("https.proxy");
+                if (httpProxy!=null || httpsProxy!=null) {
+                    proxies = "http:" + httpProxy + ";https:" + httpsProxy;
+                }
+                String logMessage =
+                          "AADToken: HTTP connection failed for getting token from AzureAD. Http response: "
                         + httpResponseCode + " " + conn.getResponseMessage()
-                        + "[" + requestId + "]");
-                throw new HttpException(httpResponseCode, requestId, conn.getResponseMessage());
+                        + " Content-Type: " + responseContentType
+                        + " Content-Length: " + responseContentLength
+                        + " Request ID: " + requestId.toString()
+                        + " Proxies: " + proxies
+                        + " First 1K of Body: " + responseBody;
+                log.debug(logMessage);
+                throw new HttpException(httpResponseCode, requestId, logMessage);
             }
         } finally {
             if (conn != null) conn.disconnect();
@@ -293,6 +318,21 @@ public class AzureADAuthenticator {
             httpResponseStream.close();
         }
         return token;
+    }
+
+    private static String consumeInputStream(InputStream inStream, int length) throws IOException {
+        byte[] b = new byte[length];
+        int totalBytesRead = 0;
+        int bytesRead = 0;
+
+        do {
+            bytesRead = inStream.read(b, totalBytesRead, length - totalBytesRead);
+            if (bytesRead > 0) {
+                totalBytesRead += bytesRead;
+            }
+        } while (bytesRead >= 0 && totalBytesRead < length);
+
+        return new String(b, 0, totalBytesRead);
     }
 }
 

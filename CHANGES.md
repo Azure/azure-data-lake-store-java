@@ -1,5 +1,9 @@
 # Changes to the SDK
 
+### Version 2.2.7
+1. Bugfix to IMDS-based MSI
+2. More text added to AAD token acquisition exception message
+
 ### Version 2.2.6
 1. Changed implementation of the MSI token provider to use the new IMDS REST endpoint required by AAD 
 2. Made AAD token acquisition more robust - added timeout, retry, disable keep-alive, improved exception text
