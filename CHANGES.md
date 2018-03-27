@@ -1,5 +1,8 @@
 # Changes to the SDK
 
+### Version 2.2.8
+1. Increase default timeout to 60 seconds
+
 ### Version 2.2.7
 1. Bugfix to IMDS-based MSI
 2. More text added to AAD token acquisition exception message

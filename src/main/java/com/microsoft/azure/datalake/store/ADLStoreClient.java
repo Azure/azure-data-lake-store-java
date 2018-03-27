@@ -44,7 +44,7 @@ public class ADLStoreClient {
     private String proto = "https";
     private boolean enableRemoteExceptions = false;
     private String pathPrefix = null;
-    int timeout = 5000; // internal scope, available to Input and Output Streams
+    int timeout = 60000; // internal scope, available to Input and Output Streams
 
 
     private static String sdkVersion = null;
