@@ -44,8 +44,9 @@ public class ADLStoreClient {
     private String proto = "https";
     private boolean enableRemoteExceptions = false;
     private String pathPrefix = null;
+    private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
+    volatile boolean disableReadAheads = false;
     int timeout = 60000; // internal scope, available to Input and Output Streams
-
 
     private static String sdkVersion = null;
     static {
@@ -995,6 +996,7 @@ public class ADLStoreClient {
         if (o.isUsingInsecureTransport()) this.setInsecureTransport();
         if (o.isThrowingRemoteExceptionsEnabled()) this.enableThrowingRemoteExceptions();
         if (o.getUserAgentSuffix() != null) this.setUserAgentSuffix(o.getUserAgentSuffix());
+        if (o.getReadAheadQueueDepth() >= 0 ) this.readAheadQueueDepth = o.getReadAheadQueueDepth();
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
     }
 
@@ -1024,6 +1026,14 @@ public class ADLStoreClient {
     /* ----------------------------------------------------------------------------------------------------------*/
     /* Private and internal methods                                                                              */
     /* ----------------------------------------------------------------------------------------------------------*/
+
+    /**
+     * Gets the Queue depth used for read-aheads in {@link ADLFileInputStream}
+     * @return the queue depth
+     */
+    synchronized int getReadAheadQueueDepth() {
+        return this.readAheadQueueDepth;
+    }
 
 
     /**
