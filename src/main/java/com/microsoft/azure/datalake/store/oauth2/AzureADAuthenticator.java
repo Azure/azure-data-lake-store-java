@@ -60,7 +60,7 @@ public class AzureADAuthenticator {
         qp.add("client_secret", clientSecret);
         log.debug("AADToken: starting to fetch token using client creds for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null, null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null, null);
     }
 
 
@@ -117,8 +117,10 @@ public class AzureADAuthenticator {
         Hashtable<String, String> headers = new Hashtable<String, String>();
         headers.put("Metadata", "true");
 
+        RetryPolicy retryPolicy = new ExponentialBackoffPolicy(3, 1000, 2);
+
         log.debug("AADToken: starting to fetch token using MSI");
-        return getTokenCall(authEndpoint, qp.serialize(), headers, "GET");
+        return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", retryPolicy);
     }
 
     /**
@@ -140,7 +142,7 @@ public class AzureADAuthenticator {
         if (clientId != null) qp.add("client_id", clientId);
         log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null, null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null, null);
     }
 
     /**
@@ -174,7 +176,7 @@ public class AzureADAuthenticator {
         qp.add("password",password);
         log.debug("AADToken: starting to fetch token using username for user " + username );
 
-        return getTokenCall(authEndpoint, qp.serialize(), null, null);
+        return getTokenCall(authEndpoint, qp.serialize(), null, null, null);
     }
 
     private static class HttpException extends IOException {
@@ -188,10 +190,13 @@ public class AzureADAuthenticator {
         }
     }
 
-    private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers, String httpMethod)
+    private static AzureADToken getTokenCall(String authEndpoint, String body, Hashtable<String, String> headers, String httpMethod, RetryPolicy retryPolicy)
             throws IOException {
         AzureADToken token = null;
-        RetryPolicy retryPolicy = new ExponentialBackoffPolicy(3, 0, 1000, 2);
+
+        RetryPolicy retryPolicyUsed;
+        retryPolicyUsed = (retryPolicy != null) ?
+                retryPolicy : new ExponentialBackoffPolicy(3, 0, 1000, 2);
 
         int httperror = 0;
         String requestId;
@@ -213,7 +218,7 @@ public class AzureADAuthenticator {
                 ex = e;
             }
             succeeded = ((httperror == 0) && (ex == null));
-        } while (!succeeded && retryPolicy.shouldRetry(httperror, ex));
+        } while (!succeeded && retryPolicyUsed.shouldRetry(httperror, ex));
         if (!succeeded) {
             if (ex != null) throw ex;
             if (httperror!=0) throw new IOException(httpExceptionMessage);

@@ -1125,6 +1125,13 @@ public class ADLStoreClient {
         }
     }
 
+    /**
+     * gets the default timeout for HTTP calls made by methods in ADLStoreClient objects
+     * @return default timeout, in Milliseconds
+     */
+    public int getDefaultTimeout() {
+        return this.timeout;
+    }
 
     /**
      * Gets the file path prefix used for this client.
