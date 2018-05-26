@@ -10,6 +10,11 @@ package com.microsoft.azure.datalake.store;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
 
@@ -590,8 +595,10 @@ public class Core {
             return;
         }
         byte[] body = null;
-        StringBuilder sb = new StringBuilder("sources=");
-        boolean firstelem = true;
+        JsonNodeFactory jsonNodeFactory = JsonNodeFactory.instance;
+        ObjectNode rootNode = jsonNodeFactory.objectNode();
+        ArrayNode arrayNode = rootNode.putArray("sources");
+
         HashSet<String> pathSet = new HashSet<String>(4096);  // 4096: reasonably large-enough number for "most" cases
         for (String item : sources) {
             if (item.equals(path)) {
@@ -619,12 +626,10 @@ public class Core {
                 }
             }
 
-            if (!firstelem) sb.append(',');
-                       else firstelem = false;
-            sb.append(item);
+            arrayNode.add(item);
         }
         try {
-            body = sb.toString().getBytes("UTF-8");
+            body = rootNode.toString().getBytes("UTF-8");
         } catch (UnsupportedEncodingException ex) {
             //This should't happen.
             assert false : "UTF-8 encoding is not supported";
