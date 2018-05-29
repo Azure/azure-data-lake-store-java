@@ -640,7 +640,7 @@ public class Core {
             qp = new QueryParams();
             qp.add("deleteSourceDirectory", "true");
         }
-
+        opts.contentType = "application/json";
         HttpTransport.makeCall(client, Operation.MSCONCAT, path, qp, body, 0, body.length, opts, resp);
     }
 

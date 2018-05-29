@@ -30,4 +30,6 @@ public class RequestOptions {
      * the {@link RetryPolicy} to use for the request
      */
     public RetryPolicy retryPolicy = null;
+
+    public String contentType;
 }

@@ -265,6 +265,9 @@ class HttpTransport {
             conn.setUseCaches(false);
             conn.setRequestMethod(op.method);
             conn.setDoInput(true);
+            if(opts.contentType != null) {
+                conn.setRequestProperty("Content-Type", opts.contentType);
+            }
 
             // populate request body if applicable
             if (!op.method.equals("GET")) {
