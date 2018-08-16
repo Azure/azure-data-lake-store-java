@@ -877,6 +877,25 @@ public class Core {
                     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
                         break;
                     }
+                    // If we have start array in some field value then extract everything after that
+                    if (jp.getCurrentToken() == JsonToken.START_ARRAY) {
+                        int startArraysEncountered =0;
+                        while (jp.hasCurrentToken() ) {
+                            jp.nextToken();
+                            // There can be [[],[]] arrays within arrays
+                            if(jp.getCurrentToken() == JsonToken.START_ARRAY)
+                            {
+                                startArraysEncountered ++;
+                            }
+                            if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
+                                if(startArraysEncountered-- <= 0)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                        // At this point the jp.getcurrenttoken points to the end array corresponding to the initial start array
+                    }
                     jp.nextToken();
                 }
                 jp.nextToken(); //  END_OBJECT - }  // FileStatus

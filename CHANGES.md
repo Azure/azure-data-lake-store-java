@@ -1,7 +1,12 @@
 # Changes to the SDK
 
+### Version 2.2.11
+1. Fix liststatus response parsing when filestatus object contains array in one field
+2. Fix bug in exponential backoff policy for MSI
+
 ### Version 2.2.9
 1. Add special handling for 404 errors when requesting tokens from MSI
+
 
 ### Version 2.2.8
 1. Increase default timeout to 60 seconds

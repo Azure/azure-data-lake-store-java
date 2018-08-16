@@ -18,7 +18,8 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-
+import java.util.HashSet;
+import java.util.List;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -140,6 +141,33 @@ public class TestSdkMock {
 
         server.enqueue(new MockResponse().setResponseCode(200)); // succeed for the 0-length append
         os.close();
+    }
+
+    @Test
+    public void testListStatusWithArrayInResponse() throws IOException {
+        String liststatusResponse = "{\"FileStatuses\":{\"FileStatus\":[{\"length\":0,\"pathSuffix\":\"Test01\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test02\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[\"Share\",\"PartOfShare\"]}]}}";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse));
+        List<DirectoryEntry> entries=client.enumerateDirectory("/TestShare");
+        HashSet<String> hset = new HashSet<String>();
+        for (DirectoryEntry entry : entries) {
+            hset.add(entry.fullName);
+        }
+        assertTrue(hset.size() == 2);
+        assertTrue(hset.contains("/TestShare/Test01"));
+        assertTrue(hset.contains("/TestShare/Test02"));
+    }
+    @Test
+    public void testListStatusWithMultipleArrayInResponse() throws IOException {
+        String liststatusResponse = "{\"FileStatuses\":{\"FileStatus\":[{\"length\":0,\"pathSuffix\":\"Test01\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test02\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[[\"Share\",\"Share1\"],[\"PartOfShare\"]]}]}}";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse));
+        List<DirectoryEntry> entries=client.enumerateDirectory("/TestShare");
+        HashSet<String> hset = new HashSet<String>();
+        for (DirectoryEntry entry : entries) {
+            hset.add(entry.fullName);
+        }
+        assertTrue(hset.size() == 2);
+        assertTrue(hset.contains("/TestShare/Test01"));
+        assertTrue(hset.contains("/TestShare/Test02"));
     }
 
 }
