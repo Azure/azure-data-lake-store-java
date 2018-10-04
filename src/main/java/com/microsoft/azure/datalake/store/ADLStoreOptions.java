@@ -17,6 +17,7 @@ public class ADLStoreOptions {
     private String pathPrefix = null;
     private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
     private int defaultTimeout = -1;
+    private boolean alterCipherSuits = true;
 
     public ADLStoreOptions() {
     }
@@ -154,4 +155,18 @@ public class ADLStoreOptions {
         return this.defaultTimeout;
     }
 
+    /**
+     * Java 1.8 version with GCM cipher suite does not use hardware acceleration.
+     * If set to true then SDK would try to optimize cipher suite selection.
+     * If set to false then SDK would use default cipher suite.
+     *
+     * @param alterCipherSuits true if the cipher suite alteration is required.
+     */
+    public void alterCipherSuits(boolean alterCipherSuits) {
+        this.alterCipherSuits = alterCipherSuits;
+    }
+
+    boolean shouldAlterCipherSuits() {
+        return this.alterCipherSuits;
+    }
 }

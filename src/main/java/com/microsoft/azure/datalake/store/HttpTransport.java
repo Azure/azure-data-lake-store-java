@@ -10,17 +10,16 @@ package com.microsoft.azure.datalake.store;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
 import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
  *
@@ -250,11 +249,28 @@ class HttpTransport {
         }
 
         HttpURLConnection conn = null;
+        String userAgent = client.getUserAgent();
         try {
-            // Setup Http Request (method and headers)
             conn = (HttpURLConnection) url.openConnection();
+            if(conn instanceof HttpsURLConnection && client.shouldAlterCipherSuits()) {
+                HttpsURLConnection secureConn = (HttpsURLConnection) conn;
+                SSLSocketFactoryEx sslSocketFactoryEx = null;
+                try {
+                    sslSocketFactoryEx = SSLSocketFactoryEx.getDefaultFactory();
+                } catch (IOException e) {
+                    // Suppress exception. Failure to init SSLSocketFactoryEx would have only performance impact.
+                    log.info("Failed to init SSLSocketFactoryEx, Fallback to default SSLSocketFactory");
+                }
+
+                if(sslSocketFactoryEx != null) {
+                    secureConn.setSSLSocketFactory(sslSocketFactoryEx);
+                    userAgent += "/" + sslSocketFactoryEx.getUserAgent();
+                }
+            }
+
+            // Setup Http Request (method and headers)
             conn.setRequestProperty("Authorization", token);
-            conn.setRequestProperty("User-Agent", client.getUserAgent());
+            conn.setRequestProperty("User-Agent", userAgent);
             conn.setRequestProperty("x-ms-client-request-id", opts.requestid);
             String latencyHeader = LatencyTracker.get();
             if (latencyHeader != null) conn.setRequestProperty("x-ms-adl-client-latency", latencyHeader);

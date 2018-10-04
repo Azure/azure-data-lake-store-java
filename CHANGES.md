@@ -1,8 +1,13 @@
 # Changes to the SDK
 
+### Version 2.3.2
+1. Add special handling for 404 errors when requesting tokens from MSI
+2. Fix liststatus response parsing when filestatus object contains array in one field.
+3. Use wildfly openssl native binding with Java. This is a workaround to https://bugs.openjdk.java.net/browse/JDK-8046943 issue. 2X performance boost over HTTPS.
+
 ### Version 2.3.1
 1. Made the default queue depth to zero (basically disabling read-ahead by default). Set readahead queue depth 
-   using ADLStoreOptionssetReadAheadQueueDepth() to enable read-ahead
+   using ADLStoreOptions.setReadAheadQueueDepth() to enable read-ahead
 
 ### Version 2.3.0-preview2
 1. Made timeouts more aggressive, and made the ADLStoreClient's default timeout configurable (ADLStoreOptions.setDefaultTimeout)
