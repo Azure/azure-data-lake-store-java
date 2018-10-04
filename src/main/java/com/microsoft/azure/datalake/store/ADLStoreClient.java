@@ -47,6 +47,7 @@ public class ADLStoreClient {
     private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
     volatile boolean disableReadAheads = false;
     int timeout = 60000; // internal scope, available to Input and Output Streams
+    private boolean alterCipherSuits = true;
 
     private static String sdkVersion = null;
     static {
@@ -998,6 +999,7 @@ public class ADLStoreClient {
         if (o.getUserAgentSuffix() != null) this.setUserAgentSuffix(o.getUserAgentSuffix());
         if (o.getReadAheadQueueDepth() >= 0 ) this.readAheadQueueDepth = o.getReadAheadQueueDepth();
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
+        this.alterCipherSuits = o.shouldAlterCipherSuits();
     }
 
 
@@ -1091,6 +1093,10 @@ public class ADLStoreClient {
         proto = "http";
     }
 
+    boolean shouldAlterCipherSuits() {
+        return this.alterCipherSuits;
+    }
+
     /**
      * get the http prefix ({@code http} or {@code https}) that will be used for
      * connections used by thei client.
@@ -1135,6 +1141,13 @@ public class ADLStoreClient {
         }
     }
 
+    /**
+     * gets the default timeout for HTTP calls made by methods in ADLStoreClient objects
+     * @return default timeout, in Milliseconds
+     */
+    public int getDefaultTimeout() {
+        return this.timeout;
+    }
 
     /**
      * Gets the file path prefix used for this client.
