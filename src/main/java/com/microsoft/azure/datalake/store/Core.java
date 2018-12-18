@@ -10,6 +10,7 @@ package com.microsoft.azure.datalake.store;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
 
@@ -590,7 +591,8 @@ public class Core {
             return;
         }
         byte[] body = null;
-        StringBuilder sb = new StringBuilder("sources=");
+        JsonStringEncoder jsonEncoder = JsonStringEncoder.getInstance();
+        StringBuilder sb = new StringBuilder("{\"sources\":[");
         boolean firstelem = true;
         HashSet<String> pathSet = new HashSet<String>(4096);  // 4096: reasonably large-enough number for "most" cases
         for (String item : sources) {
@@ -619,10 +621,15 @@ public class Core {
                 }
             }
 
-            if (!firstelem) sb.append(',');
-                       else firstelem = false;
-            sb.append(item);
+            if (!firstelem) {
+                sb.append(',');
+            }
+            else {
+                firstelem = false;
+            }
+            sb.append("\"").append(jsonEncoder.quoteAsString(item)).append("\"");
         }
+        sb.append("]}");
         try {
             body = sb.toString().getBytes("UTF-8");
         } catch (UnsupportedEncodingException ex) {

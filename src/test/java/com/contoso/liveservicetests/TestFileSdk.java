@@ -549,7 +549,45 @@ public class TestFileSdk {
         while ((bytesRead = in.read(b1, count, b1.length-count)) >=0 && count<=b1.length ) {
             count += bytesRead;
         }
+        // verify what was read is identical to what was written
+        assertTrue("file length should match what was written", contents.length == count);
+        byte[] b2 = Arrays.copyOfRange(b1, 0, count);
+        assertTrue("file contents should match", Arrays.equals(contents, b2));
+    }
 
+    @Test
+    public void concatTwoFilesSpecialCharacters() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        String fn1 = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-1~`!!@#$%^&()-_=+.txt";
+        String fn2 = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-2{}[];',..txt  ";
+        String fnc = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-c.txt";
+        System.out.println("Running concatTwoFilesSpecialCharacters");
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(4096);
+        // write some text to file
+        byte [] contents = HelperUtils.getSampleText1();
+        OutputStream out = client.createFile(fn1, IfExists.OVERWRITE);
+        out.write(contents);
+        bos.write(contents);
+        out.close();
+        // write text to another file
+        contents = HelperUtils.getSampleText2();
+        out = client.createFile(fn2, IfExists.OVERWRITE);
+        out.write(contents);
+        bos.write(contents);
+        out.close();
+        bos.close();
+        contents = bos.toByteArray();
+        // concatenate files
+        List<String> flist = Arrays.asList(fn1, fn2);
+        client.concatenateFiles(fnc, flist);
+        // read text from file
+        InputStream in = client.getReadStream(fnc);
+        byte[] b1 = new byte[contents.length*2]; // double the size, to account for bloat due to possible bug in upload
+        int bytesRead;
+        int count = 0;
+        while ((bytesRead = in.read(b1, count, b1.length-count)) >=0 && count<=b1.length ) {
+            count += bytesRead;
+        }
         // verify what was read is identical to what was written
         assertTrue("file length should match what was written", contents.length == count);
         byte[] b2 = Arrays.copyOfRange(b1, 0, count);

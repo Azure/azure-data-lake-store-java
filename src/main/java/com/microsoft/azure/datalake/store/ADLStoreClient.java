@@ -280,7 +280,9 @@ public class ADLStoreClient {
         Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
             leaseId, createParent, SyncFlag.DATA, this, opts, resp);
         if (!resp.successful) {
-            throw this.getExceptionFromResponse(resp, "Error creating file " + path);
+            if(!(overwrite && resp.httpResponseCode == 403 && resp.remoteExceptionName.contains("FileAlreadyExistsException"))){
+                throw this.getExceptionFromResponse(resp, "Error creating file " + path);
+            }
         }
         return new ADLFileOutputStream(path, this, true, leaseId);
     }

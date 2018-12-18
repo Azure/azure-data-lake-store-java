@@ -1,5 +1,11 @@
 # Changes to the SDK
 
+### Version 2.3.3
+1. Source files list will go in json format for concat operation to handle special characters in source filenames
+2. Prevent FileAlreadyExists exception for create with overwrite 
+3. Update com.fasterxml.jackson.core:jackson-core to 2.7.9 to avoid security vulnerability
+4. Disable wildfly logs to the console.
+
 ### Version 2.3.2
 1. Add special handling for 404 errors when requesting tokens from MSI
 2. Fix liststatus response parsing when filestatus object contains array in one field.
@@ -18,6 +24,7 @@
    configuration option to ADLStoreOptions to set the queue depth for read-ahead.
 2. Changed REST API version to 2017-08-01 (required for read-aheads)
 3. Internal bug fixes
+
 
 ### Version 2.2.8
 1. Increase default timeout to 60 seconds

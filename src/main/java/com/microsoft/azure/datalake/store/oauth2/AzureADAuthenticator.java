@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.microsoft.azure.datalake.store.QueryParams;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicyforMSI;
 import com.microsoft.azure.datalake.store.retrypolicies.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +118,7 @@ public class AzureADAuthenticator {
         Hashtable<String, String> headers = new Hashtable<String, String>();
         headers.put("Metadata", "true");
 
-        RetryPolicy retryPolicy = new ExponentialBackoffPolicy(3, 1000, 2);
+        RetryPolicy retryPolicy = new ExponentialBackoffPolicyforMSI(3, 1000, 2);
 
         log.debug("AADToken: starting to fetch token using MSI");
         return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", retryPolicy);

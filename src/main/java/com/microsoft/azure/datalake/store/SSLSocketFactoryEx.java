@@ -9,6 +9,7 @@ package com.microsoft.azure.datalake.store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wildfly.openssl.OpenSSLProvider;
+import org.wildfly.openssl.SSL;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.logging.Level;
 
 /**
  * Extension to use native OpenSSL library instead of JSE for better performance.
@@ -155,6 +157,7 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
     switch (channelMode) {
     case Default:
       try {
+        java.util.logging.Logger.getLogger(SSL.class.getName()).setLevel(Level.WARNING);
         m_ctx = SSLContext.getInstance("openssl.TLS");
         m_ctx.init(km, tm, random);
         channelMode = SSLChannelMode.OpenSSL;
