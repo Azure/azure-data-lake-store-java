@@ -11,6 +11,8 @@ package com.microsoft.azure.datalake.store;
  */
 public class ADLStoreOptions {
 
+    public static final String USE_OFF_HEAP_MEMORY_KEY = "com.microsoft.azure.datalake.store.use_off_heap_memory";
+
     private String userAgentSuffix = null;
     private boolean insecureTransport = false;
     private boolean enableRemoteExceptions = false;
@@ -18,6 +20,7 @@ public class ADLStoreOptions {
     private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
+    private boolean useOffHeapMemory = Boolean.getBoolean(USE_OFF_HEAP_MEMORY_KEY);
 
     public ADLStoreOptions() {
     }
@@ -168,5 +171,13 @@ public class ADLStoreOptions {
 
     boolean shouldAlterCipherSuits() {
         return this.alterCipherSuits;
+    }
+
+    boolean isUsingOffHeapMemory() {
+        return this.useOffHeapMemory;
+    }
+
+    public void setUseOffHeapMemory(boolean useOffHeapMemory) {
+        this.useOffHeapMemory = useOffHeapMemory;
     }
 }

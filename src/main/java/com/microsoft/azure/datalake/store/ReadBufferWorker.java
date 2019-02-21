@@ -45,7 +45,7 @@ class ReadBufferWorker implements Runnable {
             if (buffer != null) {
                 try {
                     // do the actual read, from the file.
-                    int bytesRead = buffer.file.readRemote(buffer.offset, buffer.buffer, 0, buffer.requestedLength, true);
+                    int bytesRead = buffer.file.readRemote(buffer.offset, buffer.buffer, null, 0, buffer.requestedLength, true);
                     bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
                 } catch (Exception ex) {
                     bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
