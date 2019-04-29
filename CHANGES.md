@@ -1,5 +1,11 @@
 # Changes to the SDK
 
+### Version 2.3.4
+1. Updated enumerateDirectory to use continuationToken
+2. Updated api-version to 2018-09-01
+3. Update version of jackson.core and maven-javadoc
+4. separate out append and closehandle for SyncFlag close to avoid race condition on retries
+
 ### Version 2.3.3
 1. Source files list will go in json format for concat operation to handle special characters in source filenames
 2. Prevent FileAlreadyExists exception for create with overwrite 

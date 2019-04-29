@@ -11,6 +11,7 @@ import com.microsoft.azure.datalake.store.*;
 
 import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
 import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
+import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,6 +44,13 @@ public class TestFileSdk {
         String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
         client = ADLStoreClient.createClient(account, aadToken.accessToken);
         testsEnabled = Boolean.parseBoolean(prop.getProperty("SdkTestsEnabled", "true"));
+        client.createDirectory(directory);
+        client.removeAllAcls(directory);
+    }
+
+    @AfterClass
+    public static void teardown() throws IOException {
+        client.deleteRecursive(directory);
     }
 
     @Test
@@ -1018,6 +1026,7 @@ public class TestFileSdk {
         assertTrue("directory of 4001 should return 4001 entries with listsize 12000", list.size() == 4001);
         list = client.enumerateDirectory(dirname, "f0500.txt");
         assertTrue("directory of 1000 should return 3501 entries with startAfter f0500", list.size() == 3501);
+
     }
 
 

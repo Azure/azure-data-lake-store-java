@@ -52,7 +52,8 @@ public class TestCore {
     }
 
     @AfterClass
-    public static void teardown() {
+    public static void teardown() throws IOException {
+        client.deleteRecursive(directory);
     }
 
     /*
