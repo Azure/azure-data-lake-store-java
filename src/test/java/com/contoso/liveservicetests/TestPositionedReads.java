@@ -11,6 +11,7 @@ import com.microsoft.azure.datalake.store.*;
 
 import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
 import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
+import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,6 +42,11 @@ public class TestPositionedReads {
         String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
         client = ADLStoreClient.createClient(account, aadToken);
         testsEnabled = Boolean.parseBoolean(prop.getProperty("PositionedReadsTestsEnabled", "true"));
+    }
+
+    @AfterClass
+    public static void teardown() throws IOException {
+        client.deleteRecursive(directory);
     }
 
     @Test

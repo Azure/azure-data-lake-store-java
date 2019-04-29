@@ -4,7 +4,7 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>azure-data-lake-store-sdk</artifactId>
-  <version>2.3.3</version>
+  <version>2.3.4</version>
   <packaging>jar</packaging>
   <name>Azure Data Lake Store - Java client SDK</name>
   <url>https://azure.microsoft.com/en-us/services/data-lake-store</url>
@@ -98,7 +98,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
+        <version>3.0.1</version>
         <configuration>
           <quiet>true</quiet>  <!-- only show warnings and errors during build -->
         </configuration>
@@ -183,7 +183,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>2.7.9</version>
+      <version>2.8.6</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

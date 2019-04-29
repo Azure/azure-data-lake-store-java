@@ -531,23 +531,26 @@ public class ADLStoreClient {
         int pagesize = 4000;
         int numEntriesToRequest;
         ArrayList<DirectoryEntry> list;
+        String continuationToken;
         boolean eol = (maxEntriesToRetrieve <= 0); // eol=end-of-list
 
         while (!eol) {
             numEntriesToRequest = Math.min(maxEntriesToRetrieve, pagesize);
-            list = (ArrayList<DirectoryEntry>) enumerateDirectoryInternal(path, numEntriesToRequest,
+            DirectoryEntryListWithContinuationToken directoryEntryListWithContinuationToken = enumerateDirectoryInternal(path, numEntriesToRequest,
                     startAfter, endBefore, oidOrUpn);
+            continuationToken = directoryEntryListWithContinuationToken.getContinuationToken();
+            list = (ArrayList<DirectoryEntry>) directoryEntryListWithContinuationToken.getEntries();
             if (list == null || list.size() == 0) break; // return what we have so far
             int size = list.size();
             deList.addAll(list);
-            startAfter = list.get(size-1).name;
+            startAfter = continuationToken;
             maxEntriesToRetrieve -= size;
-            eol = (maxEntriesToRetrieve <= 0) || (size < numEntriesToRequest);
+            eol = (maxEntriesToRetrieve <= 0) || (continuationToken == "");
         }
         return deList;
     }
 
-    private List<DirectoryEntry> enumerateDirectoryInternal(String path,
+    private DirectoryEntryListWithContinuationToken enumerateDirectoryInternal(String path,
                                                             int maxEntriesToRetrieve,
                                                             String startAfter,
                                                             String endBefore,
@@ -557,7 +560,7 @@ public class ADLStoreClient {
         opts.retryPolicy = new ExponentialBackoffPolicy();
         opts.timeout = 2 * this.timeout;  // double the default timeout
         OperationResponse resp = new OperationResponse();
-        List<DirectoryEntry> dirEnt  = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, opts, resp);
+        DirectoryEntryListWithContinuationToken dirEnt  = Core.listStatusWithToken(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, opts, resp);
         if (!resp.successful) {
             throw getExceptionFromResponse(resp, "Error enumerating directory " + path);
         }
