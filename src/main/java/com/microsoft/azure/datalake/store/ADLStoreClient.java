@@ -43,6 +43,7 @@ public class ADLStoreClient {
     private String tiHeader = null;
     private String proto = "https";
     private boolean enableRemoteExceptions = false;
+    private boolean useOffHeapMemory = Boolean.getBoolean(ADLStoreOptions.USE_OFF_HEAP_MEMORY_KEY);
     private String pathPrefix = null;
     private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
     volatile boolean disableReadAheads = false;
@@ -1005,6 +1006,7 @@ public class ADLStoreClient {
         if (o.getReadAheadQueueDepth() >= 0 ) this.readAheadQueueDepth = o.getReadAheadQueueDepth();
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
         this.alterCipherSuits = o.shouldAlterCipherSuits();
+        this.useOffHeapMemory = o.isUsingOffHeapMemory();
     }
 
 
@@ -1220,5 +1222,12 @@ public class ADLStoreClient {
         }
     }
 
+    boolean isUsingOffHeapMemory() {
+        return useOffHeapMemory;
+    }
+
+    public void setUseOffHeapMemory(boolean useOffHeapMemory) {
+        this.useOffHeapMemory = useOffHeapMemory;
+    }
 
 }
