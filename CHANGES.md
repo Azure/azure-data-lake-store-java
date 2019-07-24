@@ -1,5 +1,9 @@
 # Changes to the SDK
 
+### Version 2.3.5
+1. Updated wildfly openssl version and removed shading of the package
+2. Fix bug in ordering in json parsing for liststatus response
+
 ### Version 2.3.4
 1. Updated enumerateDirectory to use continuationToken
 2. Updated api-version to 2018-09-01
