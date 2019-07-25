@@ -4,7 +4,7 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>azure-data-lake-store-sdk</artifactId>
-  <version>2.3.4</version>
+  <version>2.3.5</version>
   <packaging>jar</packaging>
   <name>Azure Data Lake Store - Java client SDK</name>
   <url>https://azure.microsoft.com/en-us/services/data-lake-store</url>
@@ -136,45 +136,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.0.0</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <minimizeJar>true</minimizeJar>
-          <artifactSet>
-            <includes>
-              <include>org.wildfly.openssl</include>
-            </includes>
-          </artifactSet>
-          <relocations>
-            <relocation>
-              <pattern>org.wildfly.openssl</pattern>
-              <shadedPattern>org.wildfly.openssl</shadedPattern>
-            </relocation>
-          </relocations>
-          <filters>
-            <filter>
-              <artifact>*:*</artifact>
-              <excludes>
-                <exclude>META-INF/**</exclude>
-                <exclude>LICENSE</exclude>
-                <exclude>NOTICE</exclude>
-                <exclude>/*.txt</exclude>
-                <exclude>build.properties</exclude>
-              </excludes>
-            </filter>
-          </filters>
-        </configuration>
       </plugin>
     </plugins>
   </build>
