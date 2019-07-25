@@ -193,7 +193,7 @@
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
-      <version>1.0.0.CR5</version>
+      <version>1.0.7.Final</version>
     </dependency>
 
     <!-- Test dependencies -->
