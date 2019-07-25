@@ -853,8 +853,7 @@ public class Core {
                                                   UserGroupRepresentation oidOrUpn,
                                                   ADLStoreClient client,
                                                   RequestOptions opts,
-                                                  OperationResponse resp)
-    {
+                                                  OperationResponse resp) {
         DirectoryEntryListWithContinuationToken ret = new DirectoryEntryListWithContinuationToken();
             QueryParams qp = new QueryParams();
 
@@ -897,83 +896,85 @@ public class Core {
                     JsonParser jp = jf.createParser(resp.responseStream);
                     String fieldName, fieldValue;
 
-                    jp.nextToken();  // START_OBJECT - {
-                    jp.nextToken();  // FIELD_NAME - "FileStatuses":
-                    jp.nextToken();  // START_OBJECT - {
-                    jp.nextToken();  // FIELD_NAME - "continuationToken":
-                    jp.nextToken();  // Value of "continuationToken":
-                    ret.setContinuationToken(jp.getText());
-                    jp.nextToken();  // FIELD_NAME - "FileStatus":
-                    jp.nextToken();  // START_ARRAY - [
-                    jp.nextToken();
-                    while (jp.hasCurrentToken()) {
-                        if (jp.getCurrentToken() == JsonToken.END_OBJECT) {
-                            if ("".equals(name)) {   // called on a file instead of a directory
-                                fullName = path;
-                            } else {
-                                fullName = path + name;
-                            }
-                            DirectoryEntry entry = new DirectoryEntry(name,
-                                    fullName,
-                                    length,
-                                    group,
-                                    user,
-                                    lastAccessTime,
-                                    lastModifiedTime,
-                                    type,
-                                    blocksize,
-                                    replicationFactor,
-                                    permission,
-                                    aclBit,
-                                    expiryTime);
-                            list.add(entry);
-                        }
-                        if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                            fieldName = jp.getCurrentName();
-                            jp.nextToken();
-                            fieldValue = jp.getText();
 
-                            if (fieldName.equals("length")) length = Long.parseLong(fieldValue);
-                            if (fieldName.equals("pathSuffix")) name = fieldValue;
-                            if (fieldName.equals("type")) type = DirectoryEntryType.valueOf(fieldValue);
-                            if (fieldName.equals("accessTime")) lastAccessTime = new Date(Long.parseLong(fieldValue));
-                            if (fieldName.equals("modificationTime")) lastModifiedTime = new Date(Long.parseLong(fieldValue));
-                            if (fieldName.equals("permission")) permission = fieldValue;
-                            if (fieldName.equals("owner")) user = fieldValue;
-                            if (fieldName.equals("group")) group = fieldValue;
-                            if (fieldName.equals("blockSize")) blocksize = Long.parseLong(fieldValue);
-                            if (fieldName.equals("replication")) replicationFactor = Integer.parseInt(fieldValue);
-                            if (fieldName.equals("aclBit")) aclBit = Boolean.parseBoolean(fieldValue);
-                            if (fieldName.equals("msExpirationTime")) {
-                                long expiryms = Long.parseLong(fieldValue);
-                                expiryTime = (expiryms > 0) ? new Date(expiryms) : null;
-                            }
-                        }
-                        if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-                            break;
-                        }
-                        // If we have start array in some field value then extract everything after that
-                        if (jp.getCurrentToken() == JsonToken.START_ARRAY) {
-                            int startArraysEncountered =0;
-                            while (jp.hasCurrentToken() ) {
-                                jp.nextToken();
-                                // There can be [[],[]] arrays within arrays
-                                if(jp.getCurrentToken() == JsonToken.START_ARRAY)
-                                {
-                                    startArraysEncountered ++;
+                    while(jp.nextToken() !=  JsonToken.END_OBJECT) {
+                        if (jp.getCurrentToken() == JsonToken.FIELD_NAME && jp.getText() == "continuationToken") {  // FIELD_NAME - "continuationToken":
+                            jp.nextToken();  // Value of "continuationToken":
+                            ret.setContinuationToken(jp.getText());
+                        } else if (jp.getCurrentToken() == JsonToken.FIELD_NAME && jp.getText() == "FileStatus") {
+                            jp.nextToken();  // START_ARRAY - [
+                            jp.nextToken();
+
+
+                            while (jp.hasCurrentToken()) {
+                                if (jp.getCurrentToken() == JsonToken.END_OBJECT) {
+                                    if ("".equals(name)) {   // called on a file instead of a directory
+                                        fullName = path;
+                                    } else {
+                                        fullName = path + name;
+                                    }
+                                    DirectoryEntry entry = new DirectoryEntry(name,
+                                            fullName,
+                                            length,
+                                            group,
+                                            user,
+                                            lastAccessTime,
+                                            lastModifiedTime,
+                                            type,
+                                            blocksize,
+                                            replicationFactor,
+                                            permission,
+                                            aclBit,
+                                            expiryTime);
+                                    list.add(entry);
                                 }
-                                if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-                                    if(startArraysEncountered-- <= 0)
-                                    {
-                                        break;
+                                if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
+                                    fieldName = jp.getCurrentName();
+                                    jp.nextToken();
+                                    fieldValue = jp.getText();
+
+                                    if (fieldName.equals("length")) length = Long.parseLong(fieldValue);
+                                    if (fieldName.equals("pathSuffix")) name = fieldValue;
+                                    if (fieldName.equals("type")) type = DirectoryEntryType.valueOf(fieldValue);
+                                    if (fieldName.equals("accessTime")) lastAccessTime = new Date(Long.parseLong(fieldValue));
+                                    if (fieldName.equals("modificationTime")) lastModifiedTime = new Date(Long.parseLong(fieldValue));
+                                    if (fieldName.equals("permission")) permission = fieldValue;
+                                    if (fieldName.equals("owner")) user = fieldValue;
+                                    if (fieldName.equals("group")) group = fieldValue;
+                                    if (fieldName.equals("blockSize")) blocksize = Long.parseLong(fieldValue);
+                                    if (fieldName.equals("replication")) replicationFactor = Integer.parseInt(fieldValue);
+                                    if (fieldName.equals("aclBit")) aclBit = Boolean.parseBoolean(fieldValue);
+                                    if (fieldName.equals("msExpirationTime")) {
+                                        long expiryms = Long.parseLong(fieldValue);
+                                        expiryTime = (expiryms > 0) ? new Date(expiryms) : null;
                                     }
                                 }
+                                if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
+                                    break;
+                                }
+                                // If we have start array in some field value then extract everything after that
+                                if (jp.getCurrentToken() == JsonToken.START_ARRAY) {
+                                    int startArraysEncountered =0;
+                                    while (jp.hasCurrentToken() ) {
+                                        jp.nextToken();
+                                        // There can be [[],[]] arrays within arrays
+                                        if(jp.getCurrentToken() == JsonToken.START_ARRAY)
+                                        {
+                                            startArraysEncountered ++;
+                                        }
+                                        if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
+                                            if(startArraysEncountered-- <= 0)
+                                            {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    // At this point the jp.getcurrenttoken points to the end array corresponding to the initial start array
+                                }
+                                jp.nextToken();
                             }
-                            // At this point the jp.getcurrenttoken points to the end array corresponding to the initial start array
                         }
-                        jp.nextToken();
                     }
-                    jp.nextToken(); //  END_OBJECT - }  // FileStatus
                     jp.nextToken(); //  END_OBJECT - }  // FileStatuses
                     jp.close();
                     ret.setEntries(list);

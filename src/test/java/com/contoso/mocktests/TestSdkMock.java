@@ -170,4 +170,81 @@ public class TestSdkMock {
         assertTrue(hset.contains("/TestShare/Test02"));
     }
 
+    @Test
+    public void testlistStatusWithTokenAtEnd() throws IOException {
+        String liststatusResponse1 = "{\"FileStatuses\":" +
+                "{" +
+                "\"FileStatus\":" +
+                "[" +
+                "{\"length\":0,\"pathSuffix\":\"Test01\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test02\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[[\"Share\",\"Share1\"],[\"PartOfShare\"]]" + "}" +
+                "]" +
+                "," +
+                "\"continuationToken\":\"hasToken\"" +
+                "}" +
+                "}";
+        String liststatusResponse2 = "{\"FileStatuses\":" +
+                "{" +
+                "\"FileStatus\":" +
+                "[" +
+                "{\"length\":0,\"pathSuffix\":\"Test03\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test04\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[[\"Share\",\"Share1\"],[\"PartOfShare\"]]" + "}" +
+                "]" +
+                "," +
+                "\"continuationToken\":\"\"" +
+                "}" +
+                "}";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse1));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse2));
+
+        List<DirectoryEntry> entries = client.enumerateDirectory("/TestShare");
+        HashSet<String> hset = new HashSet<String>();
+
+        for (DirectoryEntry entry : entries) {
+            hset.add(entry.fullName);
+        }
+
+        assertTrue(hset.size() == 4);
+        assertTrue(hset.contains("/TestShare/Test01"));
+        assertTrue(hset.contains("/TestShare/Test02"));
+        assertTrue(hset.contains("/TestShare/Test03"));
+        assertTrue(hset.contains("/TestShare/Test04"));
+    }
+
+    @Test
+    public void testlistStatusWithTokenAtStart() throws IOException {
+        String liststatusResponse1 = "{\"FileStatuses\":" +
+                "{" +
+                "\"continuationToken\":\"hasToken\"" +
+                "," +
+                "\"FileStatus\":" +
+                "[" +
+                "{\"length\":0,\"pathSuffix\":\"Test01\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test02\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[[\"Share\",\"Share1\"],[\"PartOfShare\"]]" + "}" +
+                "]" +
+                "}" +
+                "}";
+        String liststatusResponse2 = "{\"FileStatuses\":" +
+                "{" +
+                "\"continuationToken\":\"\"" +
+                "," +
+                "\"FileStatus\":" +
+                "[" +
+                "{\"length\":0,\"pathSuffix\":\"Test03\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1528320290048,\"modificationTime\":1528320362596,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner1\",\"group\":\"ownergroup1\",\"aclBit\":true},{\"length\":0,\"pathSuffix\":\"Test04\",\"type\":\"DIRECTORY\",\"blockSize\":0,\"accessTime\":1531515372559,\"modificationTime\":1531523888360,\"replication\":0,\"permission\":\"770\",\"owner\":\"owner2\",\"group\":\"ownergroup2\",\"aclBit\":true,\"attributes\":[[\"Share\",\"Share1\"],[\"PartOfShare\"]]" + "}" +
+                "]" +
+                "}" +
+                "}";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse1));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(liststatusResponse2));
+
+        List<DirectoryEntry> entries = client.enumerateDirectory("/TestShare");
+        HashSet<String> hset = new HashSet<String>();
+
+        for (DirectoryEntry entry : entries) {
+            hset.add(entry.fullName);
+        }
+
+        assertTrue(hset.size() == 4);
+        assertTrue(hset.contains("/TestShare/Test01"));
+        assertTrue(hset.contains("/TestShare/Test02"));
+        assertTrue(hset.contains("/TestShare/Test03"));
+        assertTrue(hset.contains("/TestShare/Test04"));
+    }
 }
