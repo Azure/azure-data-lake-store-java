@@ -1,5 +1,13 @@
 # Changes to the SDK
 
+### Version 2.3.6
+1. Added configuration option to choose SSL channel mode
+   (AdlStoreOptions.setSSLChannelMode(String mode) with possible mode values
+   being - (a) OpenSSL (b) Default_JSSE (c) Default
+   [(c) is the default choice if the config is not present or is invalid.
+   When set to (c), connection will be created in OpenSSL mode and will
+   default to Default_JSSE on any failure.]
+
 ### Version 2.3.5
 1. Updated wildfly openssl version and removed shading of the package
 2. Fix bug in ordering in json parsing for liststatus response

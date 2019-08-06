@@ -6,6 +6,8 @@
 
 package com.microsoft.azure.datalake.store;
 
+import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
+
 /**
  * Options to configure the behavior of {@link ADLStoreClient}
  */
@@ -18,6 +20,7 @@ public class ADLStoreOptions {
     private int readAheadQueueDepth = -1;  // no preference set by caller, use default in ADLFileInputStream
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
+    private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
 
     public ADLStoreOptions() {
     }
@@ -169,4 +172,23 @@ public class ADLStoreOptions {
     boolean shouldAlterCipherSuits() {
         return this.alterCipherSuits;
     }
+
+    public void setSSLChannelMode(String sslChannelMode) {
+        SSLChannelMode[] sslChannelModes = SSLChannelMode.values();
+        for(SSLChannelMode mode : sslChannelModes)
+        {
+            if (sslChannelMode.equalsIgnoreCase(mode.name()))
+            {
+                this.sslChannelMode = mode;
+                return;
+            }
+        }
+
+      this.sslChannelMode = SSLChannelMode.Default;
+    }
+
+    SSLChannelMode getSSLChannelMode() {
+      return this.sslChannelMode;
+    }
+
 }

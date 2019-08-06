@@ -256,7 +256,8 @@ class HttpTransport {
                 HttpsURLConnection secureConn = (HttpsURLConnection) conn;
                 SSLSocketFactoryEx sslSocketFactoryEx = null;
                 try {
-                    sslSocketFactoryEx = SSLSocketFactoryEx.getDefaultFactory();
+                    sslSocketFactoryEx =
+                        SSLSocketFactoryEx.getDefaultFactory(client.getSSLChannelMode());
                 } catch (IOException e) {
                     // Suppress exception. Failure to init SSLSocketFactoryEx would have only performance impact.
                     log.info("Failed to init SSLSocketFactoryEx, Fallback to default SSLSocketFactory");
