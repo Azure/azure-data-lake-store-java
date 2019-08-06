@@ -46,11 +46,12 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
   private String[] m_ciphers;
   private SSLChannelMode channelMode;
 
-  public static SSLSocketFactoryEx getDefaultFactory() throws IOException {
+  public static SSLSocketFactoryEx getDefaultFactory(SSLChannelMode sslChannelMode) throws IOException {
     if (instance == null) {
       synchronized (lock) {
         if (instance == null) {
-          instance = new SSLSocketFactoryEx(SSLChannelMode.Default);
+          instance = new SSLSocketFactoryEx(sslChannelMode);
+          log.debug("SSLSocketFactoryEx created in " + sslChannelMode.name() + " mode");
         }
       }
     }
