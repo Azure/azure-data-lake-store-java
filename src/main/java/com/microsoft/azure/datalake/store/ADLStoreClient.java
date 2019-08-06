@@ -12,6 +12,7 @@ import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
+import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +49,7 @@ public class ADLStoreClient {
     volatile boolean disableReadAheads = false;
     int timeout = 60000; // internal scope, available to Input and Output Streams
     private boolean alterCipherSuits = true;
+    private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
 
     private static String sdkVersion = null;
     static {
@@ -1005,6 +1007,7 @@ public class ADLStoreClient {
         if (o.getReadAheadQueueDepth() >= 0 ) this.readAheadQueueDepth = o.getReadAheadQueueDepth();
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
         this.alterCipherSuits = o.shouldAlterCipherSuits();
+        this.sslChannelMode = o.getSSLChannelMode();
     }
 
 
@@ -1111,7 +1114,6 @@ public class ADLStoreClient {
         return proto;
     }
 
-
     /**
      * Gets a unique long associated with this instance of {@code ADLStoreClient}
      *
@@ -1120,8 +1122,6 @@ public class ADLStoreClient {
     long getClientId() {
         return this.clientId;
     }
-
-
 
     private synchronized void enableThrowingRemoteExceptions() {
         enableRemoteExceptions = true;
@@ -1144,6 +1144,15 @@ public class ADLStoreClient {
         } catch (URISyntaxException ex) {
             throw new IllegalArgumentException("Invalid path prefix: " + prefix);
         }
+    }
+
+    /**
+     * gets the SSL Channel mode for HTTPS calls made by methods in
+     * ADLStoreClient objects
+     * @return SSLChannelMode enum values as String
+     */
+    public SSLChannelMode getSSLChannelMode() {
+        return this.sslChannelMode;
     }
 
     /**
