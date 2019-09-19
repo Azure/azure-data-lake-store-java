@@ -124,7 +124,7 @@ class ContentSummaryProcessor {
                                                             UserGroupRepresentation oidOrUpn)
             throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = client.makeExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         List<DirectoryEntry> dirEnt = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn,
                 client, opts, resp);

@@ -51,7 +51,7 @@ public class HelperUtils {
 
     public static void createEmptyFile(ADLStoreClient client, String filename) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = client.makeExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         Core.create(filename, true, null, null, 0, 0, null,
                 null, true, SyncFlag.CLOSE, client, opts, resp);
