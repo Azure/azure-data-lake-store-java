@@ -6,7 +6,6 @@
 
 package com.microsoft.azure.datalake.store;
 
-
 import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
@@ -50,11 +49,11 @@ public class ADLStoreClient {
     int timeout = 60000; // internal scope, available to Input and Output Streams
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
-	
-    private int maxRetries = 4;
-	private int exponentialRetryInterval = 1000;
-	private int exponentialFactor = 4;
-	
+    
+    private int maxRetries = ADLStoreOptions.DEFAULT_MAX_RETRIES;
+    private int exponentialRetryInterval = ADLStoreOptions.DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
+    private int exponentialFactor = ADLStoreOptions.DEFAULT_EXPONENTIAL_FACTOR;
+    
     private static String sdkVersion = null;
     static {
         InputStream is = ADLStoreClient.class.getResourceAsStream("/adlsdkversion.properties");
@@ -231,23 +230,10 @@ public class ADLStoreClient {
         // just a convenience overload, for easy discoverability in IDE's autocompletion.
         return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
 
-
-	/**
-	 * Set parameters for exponential backoff
-	 * @param maxRetries Maximum number of retry attempts
-	 * @param exponentialRetryInterval Initial retry interval, in milliseconds
-	 * @param exponentialFactor Retry interval is geometrically increased by this factor on each attempt
-	 */
-	public void setExponentialBackoffParameters(int maxRetries, int exponentialRetryInterval, int exponentialFactor) {
-		this.maxRetries = maxRetries;
-		this.exponentialRetryInterval = exponentialRetryInterval;
-		this.exponentialFactor = exponentialFactor;
-	}
-	
-	public ExponentialBackoffPolicy makeExponentialBackoffPolicy() {
-		return new ExponentialBackoffPolicy(maxRetries, 0, exponentialRetryInterval, exponentialFactor);
-	}
-	
+    ExponentialBackoffPolicy makeExponentialBackoffPolicy() {
+        return new ExponentialBackoffPolicy(maxRetries, 0, exponentialRetryInterval, exponentialFactor);
+    }
+    
     /* ----------------------------------------------------------------------------------------------------------*/
 
     /*
@@ -1028,6 +1014,9 @@ public class ADLStoreClient {
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
         this.alterCipherSuits = o.shouldAlterCipherSuits();
         this.sslChannelMode = o.getSSLChannelMode();
+        this.exponentialFactor = o.getExponentialFactor();
+        this.exponentialRetryInterval = o.getExponentialRetryInterval();
+        this.maxRetries = o.getMaxRetries();
     }
 
 

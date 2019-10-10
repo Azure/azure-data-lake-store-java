@@ -21,6 +21,13 @@ public class ADLStoreOptions {
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
+    private int maxRetries = DEFAULT_MAX_RETRIES;
+    private int exponentialRetryInterval = DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
+    private int exponentialFactor = DEFAULT_EXPONENTIAL_FACTOR;
+    
+    static final int DEFAULT_MAX_RETRIES = 4;
+    static final int DEFAULT_EXPONENTIAL_RETRY_INTERVAL = 1000;
+    static final int DEFAULT_EXPONENTIAL_FACTOR = 4;
 
     public ADLStoreOptions() {
     }
@@ -189,6 +196,30 @@ public class ADLStoreOptions {
 
     SSLChannelMode getSSLChannelMode() {
       return this.sslChannelMode;
+    }
+
+    public int getMaxRetries() {
+        return maxRetries;
+    }
+
+    public void setMaxRetries(int maxRetries) {
+        this.maxRetries = maxRetries;
+    }
+
+    public int getExponentialRetryInterval() {
+        return exponentialRetryInterval;
+    }
+
+    public void setExponentialRetryInterval(int exponentialRetryInterval) {
+        this.exponentialRetryInterval = exponentialRetryInterval;
+    }
+
+    public int getExponentialFactor() {
+        return exponentialFactor;
+    }
+
+    public void setExponentialFactor(int exponentialFactor) {
+        this.exponentialFactor = exponentialFactor;
     }
 
 }
