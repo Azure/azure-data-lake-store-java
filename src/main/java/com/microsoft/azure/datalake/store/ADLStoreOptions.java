@@ -21,7 +21,7 @@ public class ADLStoreOptions {
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
-
+    private boolean enableConditionalCreate = false;
     public ADLStoreOptions() {
     }
 
@@ -189,6 +189,14 @@ public class ADLStoreOptions {
 
     SSLChannelMode getSSLChannelMode() {
       return this.sslChannelMode;
+    }
+
+    public void setEnableConditionalCreate(boolean enableConditionalCreate) {
+        this.enableConditionalCreate = enableConditionalCreate;
+    }
+
+    boolean shouldEnableConditionalCreate(){
+        return this.enableConditionalCreate;
     }
 
 }

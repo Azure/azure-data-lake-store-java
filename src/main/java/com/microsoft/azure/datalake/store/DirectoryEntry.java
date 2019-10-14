@@ -86,6 +86,8 @@ public class DirectoryEntry {
      */
     public final String permission;
 
+    final String fileContextId ;
+
     public DirectoryEntry(String name,
                    String fullName,
                    long length,
@@ -99,6 +101,24 @@ public class DirectoryEntry {
                    String permission,
                    boolean aclBit,
                    Date expiryTime) {
+
+        this(name, fullName, length, group, user, lastAccessTime, lastModifiedTime, type, blocksize, replicationFactor, permission, aclBit, expiryTime, null);
+
+    }
+    DirectoryEntry(String name,
+                   String fullName,
+                   long length,
+                   String group,
+                   String user,
+                   Date lastAccessTime,
+                   Date lastModifiedTime,
+                   DirectoryEntryType type,
+                   long blocksize,
+                   int replicationFactor,
+                   String permission,
+                   boolean aclBit,
+                   Date expiryTime,
+                   String contextId) {
         this.name = name;
         this.fullName = fullName;
         this.length = length;
@@ -112,6 +132,8 @@ public class DirectoryEntry {
         this.replicationFactor = replicationFactor;
         this.aclBit = aclBit;
         this.expiryTime = expiryTime;
+        this.fileContextId = contextId;
+
     }
 }
 

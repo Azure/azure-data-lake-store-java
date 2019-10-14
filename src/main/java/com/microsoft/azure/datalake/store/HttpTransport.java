@@ -33,7 +33,7 @@ import java.util.UUID;
  */
 class HttpTransport {
 
-    private static final String API_VERSION = "2018-09-01"; // API version used in REST requests
+    private static final String API_VERSION = "2018-12-01"; // API version used in REST requests
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport");
     private static final Logger tokenlog = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport.tokens");
 

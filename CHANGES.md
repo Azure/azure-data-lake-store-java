@@ -1,4 +1,6 @@
 # Changes to the SDK
+### Version 2.3.7
+1. Implement create with overwrite using conditional delete. Enable this based on config.
 
 ### Version 2.3.6
 1. Added configuration option to choose SSL channel mode
