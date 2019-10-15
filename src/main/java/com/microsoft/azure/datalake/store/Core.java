@@ -305,9 +305,20 @@ public class Core {
                                  ADLStoreClient client,
                                  RequestOptions opts,
                                  OperationResponse resp) {
+        return delete(path, recursive, null, client, opts, resp);
+    }
+
+    static boolean delete(String path,
+                          boolean recursive,
+                          String fileContextId,
+                          ADLStoreClient client,
+                          RequestOptions opts,
+                          OperationResponse resp) {
         QueryParams qp = new QueryParams();
         qp.add("recursive", (recursive? "true" : "false"));
-
+        if(fileContextId != null){
+            qp.add("fileContextId", fileContextId);
+        }
         HttpTransport.makeCall(client, Operation.DELETE, path, qp, null, 0, 0, opts, resp);
         if (!resp.successful) return false;
 
@@ -705,7 +716,7 @@ public class Core {
                 long blocksize = 256 * 1024 * 1024;
                 boolean aclBit = true;
                 Date expiryTime = null;
-
+                String fileContextId = null;
                 JsonFactory jf = new JsonFactory();
                 JsonParser jp = jf.createParser(resp.responseStream);
                 String fieldName, fieldValue;
@@ -730,6 +741,9 @@ public class Core {
                             long expiryms = Long.parseLong(fieldValue);
                             if (expiryms > 0) expiryTime = new Date(expiryms);
                         }
+                        if (fieldName.equals("fileContextID")) {
+                            fileContextId = fieldValue;
+                        }
                     }
                     jp.nextToken();
                 }
@@ -748,8 +762,8 @@ public class Core {
                                           replicationFactor,
                                           permission,
                                           aclBit,
-                                          expiryTime
-                        );
+                                          expiryTime,
+                                          fileContextId);
             } catch (IOException ex) {
                 resp.successful = false;
                 resp.message = "Unexpected error happened reading response stream or parsing JSon from getFileStatus()";
