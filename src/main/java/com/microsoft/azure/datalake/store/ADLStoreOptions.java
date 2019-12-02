@@ -198,26 +198,41 @@ public class ADLStoreOptions {
       return this.sslChannelMode;
     }
 
-    public int getMaxRetries() {
+    int getMaxRetries() {
         return maxRetries;
     }
-
+    
+    /**
+     * sets the number of retries for exponential retry policy used by methods in ADLStoreClient objects
+     * @param maxRetries number of retries for exponential retry policy
+     * @return {@code this}
+     */
     public void setMaxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
     }
 
-    public int getExponentialRetryInterval() {
+    int getExponentialRetryInterval() {
         return exponentialRetryInterval;
     }
 
+    /**
+     * sets the retry interval for exponential retry policy used by methods in ADLStoreClient objects
+     * @param exponentialRetryInterval retry interval for exponential retry policy in milliseconds
+     * @return {@code this}
+     */
     public void setExponentialRetryInterval(int exponentialRetryInterval) {
         this.exponentialRetryInterval = exponentialRetryInterval;
     }
 
-    public int getExponentialFactor() {
+    int getExponentialFactor() {
         return exponentialFactor;
     }
 
+    /**
+     * sets the factor of backoff for exponential retry policy used by methods in ADLStoreClient objects
+     * @param exponentialFactor retry backoff factor for exponential retry policy
+     * @return {@code this}
+     */
     public void setExponentialFactor(int exponentialFactor) {
         this.exponentialFactor = exponentialFactor;
     }
