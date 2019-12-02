@@ -237,6 +237,7 @@ public class ADLStoreOptions {
      */
     public void setExponentialFactor(int exponentialFactor) {
         this.exponentialFactor = exponentialFactor;
+    }
 
     public void setEnableConditionalCreate(boolean enableConditionalCreate) {
         this.enableConditionalCreate = enableConditionalCreate;
