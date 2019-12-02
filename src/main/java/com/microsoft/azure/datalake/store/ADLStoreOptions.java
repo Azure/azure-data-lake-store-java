@@ -21,6 +21,7 @@ public class ADLStoreOptions {
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
+
     private int maxRetries = DEFAULT_MAX_RETRIES;
     private int exponentialRetryInterval = DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
     private int exponentialFactor = DEFAULT_EXPONENTIAL_FACTOR;
@@ -28,6 +29,7 @@ public class ADLStoreOptions {
     static final int DEFAULT_MAX_RETRIES = 4;
     static final int DEFAULT_EXPONENTIAL_RETRY_INTERVAL = 1000;
     static final int DEFAULT_EXPONENTIAL_FACTOR = 4;
+    private boolean enableConditionalCreate = false;
 
     public ADLStoreOptions() {
     }
@@ -235,6 +237,14 @@ public class ADLStoreOptions {
      */
     public void setExponentialFactor(int exponentialFactor) {
         this.exponentialFactor = exponentialFactor;
+    }
+
+    public void setEnableConditionalCreate(boolean enableConditionalCreate) {
+        this.enableConditionalCreate = enableConditionalCreate;
+    }
+
+    boolean shouldEnableConditionalCreate(){
+        return this.enableConditionalCreate;
     }
 
 }
