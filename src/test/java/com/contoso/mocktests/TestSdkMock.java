@@ -91,7 +91,7 @@ public class TestSdkMock {
         Assume.assumeTrue(testsEnabled);
         String filename = directory + "/" + "Mock.test500Then200Pattern";
 
-        server.enqueue(new MockResponse().setResponseCode(200)); // the first empty CREATE request
+        server.enqueue(new MockResponse().setResponseCode(200));
         ADLFileOutputStream os = client.createFile(filename, IfExists.OVERWRITE);
         String s = "Test string with data\n";
         byte[] data = s.getBytes();
@@ -111,6 +111,38 @@ public class TestSdkMock {
 
         server.enqueue(new MockResponse().setResponseCode(200)); // succeed for the 0-length append
         os.close();
+    }
+
+    @Test
+    public void test500Then200PatternWithAtomicCreate() throws IOException {
+        Assume.assumeTrue(testsEnabled);
+        String filename = directory + "/" + "Mock.test500Then200Pattern";
+        ADLStoreOptions o = new ADLStoreOptions();
+        o.setEnableConditionalCreate(true);
+        client.setOptions(o);
+        server.enqueue(new MockResponse().setResponseCode(404).setBody("{\"RemoteException\":{\"exception\":\"FileNotFoundException\",\"message\":\"File/Folder does not exist: /Test [874d24ca-dcb3-4b3c-9027-5337e9fdbeee][2019-06-20T12:16:48.2506507-07:00]\",\"javaClassName\":\"java.io.FileNotFoundException\"}}")); // the first empty CREATE request
+        server.enqueue(new MockResponse().setResponseCode(200));
+        ADLFileOutputStream os = client.createFile(filename, IfExists.OVERWRITE);
+        String s = "Test string with data\n";
+        byte[] data = s.getBytes();
+
+        server.enqueue(new MockResponse().setResponseCode(200)); // an append that succeeds
+        os.write(data);
+        os.flush();
+
+        server.enqueue(new MockResponse().setResponseCode(500)); // second append that should fail
+        server.enqueue(new MockResponse().setResponseCode(200)); // succeed on retry
+        try {
+            os.write(data);
+            os.flush();
+        } catch (IOException ex) {
+            fail("should not get here - request should succeed on retry");
+        }
+
+        server.enqueue(new MockResponse().setResponseCode(200)); // succeed for the 0-length append
+        os.close();
+        o.setEnableConditionalCreate(false);
+        client.setOptions(o);
     }
 
 

@@ -53,7 +53,9 @@ public class ADLStoreClient {
     private int maxRetries = ADLStoreOptions.DEFAULT_MAX_RETRIES;
     private int exponentialRetryInterval = ADLStoreOptions.DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
     private int exponentialFactor = ADLStoreOptions.DEFAULT_EXPONENTIAL_FACTOR;
-    
+
+    private boolean enableConditionalCreate = false;
+
     private static String sdkVersion = null;
     static {
         InputStream is = ADLStoreClient.class.getResourceAsStream("/adlsdkversion.properties");
@@ -280,21 +282,82 @@ public class ADLStoreClient {
             log.trace("create file for client {} for file {}", this.getClientId(), path);
         }
         String leaseId = UUID.randomUUID().toString();
-        boolean overwrite = (mode==IfExists.OVERWRITE);
-        RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = overwrite ? makeExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
-        opts.timeout = this.timeout;
-        OperationResponse resp = new OperationResponse();
-        Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
-            leaseId, createParent, SyncFlag.DATA, this, opts, resp);
-        if (!resp.successful) {
-            if(!(overwrite && resp.httpResponseCode == 403 && resp.remoteExceptionName.contains("FileAlreadyExistsException"))){
+        if (this.enableConditionalCreate && mode == IfExists.OVERWRITE) {
+            CreateFileAtomicallyWithOverWrite(path, octalPermission, createParent, leaseId);
+        }
+        else {
+            boolean overwrite = (mode==IfExists.OVERWRITE);
+            RequestOptions opts = new RequestOptions();
+            opts.retryPolicy = overwrite ? makeExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
+            opts.timeout = this.timeout;
+            OperationResponse resp = new OperationResponse();
+            Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
+                    leaseId, createParent, SyncFlag.DATA, this, opts, resp);
+            if (!resp.successful) {
                 throw this.getExceptionFromResponse(resp, "Error creating file " + path);
             }
         }
         return new ADLFileOutputStream(path, this, true, leaseId);
     }
 
+    private void CreateFileAtomicallyWithOverWrite(String path, String octalPermission, boolean createParent, String leaseId) throws IOException {
+        boolean checkExists = true;
+        RequestOptions opts = new RequestOptions();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
+        opts.timeout = this.timeout;
+        OperationResponse resp = new OperationResponse();
+
+        DirectoryEntry entry = Core.getFileStatus(path, UserGroupRepresentation.OID, this, opts, resp);
+        if (!resp.successful) {
+            if (resp.httpResponseCode == 404 && resp.remoteExceptionName.contains("FileNotFoundException")) {
+                checkExists = false;
+            } else {
+                throw getExceptionFromResponse(resp, "Error getting info for file " + path);
+            }
+        }
+
+        if (checkExists && entry.type == DirectoryEntryType.DIRECTORY) {
+            throw new ADLException("Cannot overwrite directory");
+        }
+
+        if(checkExists) {
+            opts = new RequestOptions();
+            opts.retryPolicy = new ExponentialBackoffPolicy();
+            opts.timeout = this.timeout;
+            resp = new OperationResponse();
+            Core.checkAccess(path, "-w-", this, opts, resp);
+            if (!resp.successful) {
+                if (resp.httpResponseCode == 404 && resp.remoteExceptionName.contains("FileNotFoundException")) {
+                    checkExists = false;
+                } else {
+                    throw getExceptionFromResponse(resp, "Error checking access for " + path);
+                }
+            }
+            if (checkExists) {
+                opts = new RequestOptions();
+                opts.retryPolicy = new ExponentialBackoffPolicy();
+                opts.timeout = this.timeout;
+                resp = new OperationResponse();
+                Core.delete(path, false, entry.fileContextId, this, opts, resp); // conditional delete
+                if (!resp.successful) {
+                    throw getExceptionFromResponse(resp, "Error deleting the file for create+overwrite " + path);
+                }
+            }
+        }
+
+        opts = new RequestOptions();
+        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.timeout = this.timeout;
+        resp = new OperationResponse();
+        Core.create(path, false, octalPermission, null, 0, 0, leaseId,
+                leaseId, createParent, SyncFlag.DATA, this, opts, resp);
+        if (!resp.successful) {
+            if(resp.httpResponseCode == 403 && resp.remoteExceptionName.contains("FileAlreadyExistsException")){
+                return;
+            }
+            throw this.getExceptionFromResponse(resp, "Error creating file " + path);
+        }
+    }
 
 
     /**
@@ -1017,6 +1080,7 @@ public class ADLStoreClient {
         this.exponentialFactor = o.getExponentialFactor();
         this.exponentialRetryInterval = o.getExponentialRetryInterval();
         this.maxRetries = o.getMaxRetries();
+        this.enableConditionalCreate = o.shouldEnableConditionalCreate();
     }
 
 
@@ -1233,10 +1297,10 @@ public class ADLStoreClient {
             if (!IOException.class.isAssignableFrom(clazz)) { return new IOException(message); }
             Constructor c = clazz.getConstructor(String.class);
             return (IOException) c.newInstance(message);
-        } catch (Exception ex) {
-            return new IOException(message);
-        }
-    }
+                    } catch (Exception ex) {
+                        return new IOException(message);
+                    }
+            }
 
 
 }

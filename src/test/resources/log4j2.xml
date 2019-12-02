@@ -24,8 +24,8 @@
 
 
     <Loggers>
-        <Logger name="com.microsoft.azure.datalake.store" level="info" additivity="false">
-            <AppenderRef ref="stdout"/>
+        <Logger name="com.microsoft.azure.datalake.store" level="trace" additivity="false">
+            <AppenderRef ref="fileOutput"/>
         </Logger>
         <Logger name="com.microsoft.azure.datalake.store.ReadBufferManager" level="trace" additivity="false">
             <AppenderRef ref="stdout"/>
