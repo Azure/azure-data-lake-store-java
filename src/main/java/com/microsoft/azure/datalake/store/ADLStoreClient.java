@@ -6,7 +6,6 @@
 
 package com.microsoft.azure.datalake.store;
 
-
 import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
 import com.microsoft.azure.datalake.store.oauth2.*;
@@ -50,6 +49,11 @@ public class ADLStoreClient {
     int timeout = 60000; // internal scope, available to Input and Output Streams
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
+    
+    private int maxRetries = ADLStoreOptions.DEFAULT_MAX_RETRIES;
+    private int exponentialRetryInterval = ADLStoreOptions.DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
+    private int exponentialFactor = ADLStoreOptions.DEFAULT_EXPONENTIAL_FACTOR;
+
     private boolean enableConditionalCreate = false;
 
     private static String sdkVersion = null;
@@ -228,7 +232,10 @@ public class ADLStoreClient {
         // just a convenience overload, for easy discoverability in IDE's autocompletion.
         return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
 
-
+    ExponentialBackoffPolicy makeExponentialBackoffPolicy() {
+        return new ExponentialBackoffPolicy(maxRetries, 0, exponentialRetryInterval, exponentialFactor);
+    }
+    
     /* ----------------------------------------------------------------------------------------------------------*/
 
     /*
@@ -281,7 +288,7 @@ public class ADLStoreClient {
         else {
             boolean overwrite = (mode==IfExists.OVERWRITE);
             RequestOptions opts = new RequestOptions();
-            opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
+            opts.retryPolicy = overwrite ? makeExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
             opts.timeout = this.timeout;
             OperationResponse resp = new OperationResponse();
             Core.create(path, overwrite, octalPermission, null, 0, 0, leaseId,
@@ -296,7 +303,7 @@ public class ADLStoreClient {
     private void CreateFileAtomicallyWithOverWrite(String path, String octalPermission, boolean createParent, String leaseId) throws IOException {
         boolean checkExists = true;
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
 
@@ -381,7 +388,7 @@ public class ADLStoreClient {
     public ADLFileOutputStream getAppendStream(String path) throws IOException {
         String leaseId = UUID.randomUUID().toString();
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.append(path, -1, null, 0, 0, leaseId, leaseId, SyncFlag.DATA, this, opts,
@@ -405,7 +412,7 @@ public class ADLStoreClient {
      */
     public boolean concatenateFiles(String path, List<String> fileList) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout + (fileList.size() * 500); // timeout proportional to number of files
         OperationResponse resp = new OperationResponse();
         Core.concat(path, fileList, this, opts, resp);
@@ -425,7 +432,7 @@ public class ADLStoreClient {
      */
     public void setExpiryTime(String path, ExpiryOption expiryOption, long expiryTimeMilliseconds) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.setExpiryTime(path, expiryOption, expiryTimeMilliseconds, this, opts, resp);
@@ -621,7 +628,7 @@ public class ADLStoreClient {
                                                             UserGroupRepresentation oidOrUpn)
             throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = 2 * this.timeout;  // double the default timeout
         OperationResponse resp = new OperationResponse();
         DirectoryEntryListWithContinuationToken dirEnt  = Core.listStatusWithToken(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, this, opts, resp);
@@ -652,7 +659,7 @@ public class ADLStoreClient {
      */
     public boolean createDirectory(String path, String octalPermission) throws IOException  {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         boolean succeeded = Core.mkdirs(path, octalPermission, this, opts, resp);
@@ -673,7 +680,7 @@ public class ADLStoreClient {
         if (path.equals("/")) throw new IllegalArgumentException("Cannot delete root directory tree");
 
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         boolean succeeded = Core.delete(path, true, this, opts, resp);
@@ -693,7 +700,7 @@ public class ADLStoreClient {
      */
     public void removeDefaultAcls(String path) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.removeDefaultAcl(path, this, opts, resp);
@@ -746,7 +753,7 @@ public class ADLStoreClient {
         }
 
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         boolean succeeded = Core.rename(path, newName, overwrite, this, opts, resp);
@@ -767,7 +774,7 @@ public class ADLStoreClient {
         if (path.equals("/")) throw new IllegalArgumentException("Cannot delete root directory");
 
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         boolean succeeded = Core.delete(path, false, this, opts, resp);
@@ -800,7 +807,7 @@ public class ADLStoreClient {
      */
     public DirectoryEntry getDirectoryEntry(String path, UserGroupRepresentation oidOrUpn) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         DirectoryEntry dirEnt  = Core.getFileStatus(path, oidOrUpn, this, opts, resp);
@@ -832,7 +839,7 @@ public class ADLStoreClient {
      */
     public void setOwner(String path, String owner, String group) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.setOwner(path, owner, group, this, opts, resp);
@@ -854,7 +861,7 @@ public class ADLStoreClient {
         long mtimeLong = (mtime == null)? -1 : mtime.getTime();
 
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.setTimes(path, atimeLong, mtimeLong, this, opts, resp);
@@ -908,7 +915,7 @@ public class ADLStoreClient {
      */
     public void setPermission(String path, String octalPermissions) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.setPermission(path, octalPermissions, this, opts, resp);
@@ -931,7 +938,7 @@ public class ADLStoreClient {
      */
     public boolean checkAccess(String path, String rwx) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.checkAccess(path, rwx, this, opts, resp);
@@ -953,7 +960,7 @@ public class ADLStoreClient {
      */
     public void modifyAclEntries(String path, List<AclEntry> aclSpec) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.modifyAclEntries(path, aclSpec, this, opts, resp);
@@ -973,7 +980,7 @@ public class ADLStoreClient {
      */
     public void setAcl(String path, List<AclEntry> aclSpec) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.setAcl(path, aclSpec, this, opts, resp);
@@ -991,7 +998,7 @@ public class ADLStoreClient {
      */
     public void removeAclEntries(String path, List<AclEntry> aclSpec) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.removeAclEntries(path, aclSpec, this, opts, resp);
@@ -1008,7 +1015,7 @@ public class ADLStoreClient {
      */
     public void removeAllAcls(String path) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         Core.removeAcl(path, this, opts, resp);
@@ -1042,7 +1049,7 @@ public class ADLStoreClient {
             throws IOException {
         AclStatus status = null;
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = makeExponentialBackoffPolicy();
         opts.timeout = this.timeout;
         OperationResponse resp = new OperationResponse();
         status = Core.getAclStatus(path, oidOrUpn, this, opts, resp);
@@ -1070,6 +1077,9 @@ public class ADLStoreClient {
         if (o.getDefaultTimeout() > 0) this.timeout = o.getDefaultTimeout();
         this.alterCipherSuits = o.shouldAlterCipherSuits();
         this.sslChannelMode = o.getSSLChannelMode();
+        this.exponentialFactor = o.getExponentialFactor();
+        this.exponentialRetryInterval = o.getExponentialRetryInterval();
+        this.maxRetries = o.getMaxRetries();
         this.enableConditionalCreate = o.shouldEnableConditionalCreate();
     }
 

@@ -86,7 +86,7 @@ public class Utils {
         if (contents.length <= 4 * 1024 * 1024) { // if less than 4MB, then do a direct CREATE in a single operation
             boolean overwrite = (mode==IfExists.OVERWRITE);
             RequestOptions opts = new RequestOptions();
-            opts.retryPolicy = overwrite ? new ExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
+            opts.retryPolicy = overwrite ? client.makeExponentialBackoffPolicy() : new NonIdempotentRetryPolicy();
             OperationResponse resp = new OperationResponse();
             Core.create(filename, overwrite, null, contents, 0, contents.length, null, null, true, SyncFlag.CLOSE, client, opts, resp);
             if (!resp.successful) {

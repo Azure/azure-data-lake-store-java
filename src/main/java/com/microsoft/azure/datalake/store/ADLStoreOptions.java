@@ -21,7 +21,16 @@ public class ADLStoreOptions {
     private int defaultTimeout = -1;
     private boolean alterCipherSuits = true;
     private SSLChannelMode sslChannelMode = SSLChannelMode.Default;
+
+    private int maxRetries = DEFAULT_MAX_RETRIES;
+    private int exponentialRetryInterval = DEFAULT_EXPONENTIAL_RETRY_INTERVAL;
+    private int exponentialFactor = DEFAULT_EXPONENTIAL_FACTOR;
+    
+    static final int DEFAULT_MAX_RETRIES = 4;
+    static final int DEFAULT_EXPONENTIAL_RETRY_INTERVAL = 1000;
+    static final int DEFAULT_EXPONENTIAL_FACTOR = 4;
     private boolean enableConditionalCreate = false;
+
     public ADLStoreOptions() {
     }
 
@@ -189,6 +198,45 @@ public class ADLStoreOptions {
 
     SSLChannelMode getSSLChannelMode() {
       return this.sslChannelMode;
+    }
+
+    int getMaxRetries() {
+        return maxRetries;
+    }
+    
+    /**
+     * sets the number of retries for exponential retry policy used by methods in ADLStoreClient objects
+     * @param maxRetries number of retries for exponential retry policy
+     * @return {@code this}
+     */
+    public void setMaxRetries(int maxRetries) {
+        this.maxRetries = maxRetries;
+    }
+
+    int getExponentialRetryInterval() {
+        return exponentialRetryInterval;
+    }
+
+    /**
+     * sets the retry interval for exponential retry policy used by methods in ADLStoreClient objects
+     * @param exponentialRetryInterval retry interval for exponential retry policy in milliseconds
+     * @return {@code this}
+     */
+    public void setExponentialRetryInterval(int exponentialRetryInterval) {
+        this.exponentialRetryInterval = exponentialRetryInterval;
+    }
+
+    int getExponentialFactor() {
+        return exponentialFactor;
+    }
+
+    /**
+     * sets the factor of backoff for exponential retry policy used by methods in ADLStoreClient objects
+     * @param exponentialFactor retry backoff factor for exponential retry policy
+     * @return {@code this}
+     */
+    public void setExponentialFactor(int exponentialFactor) {
+        this.exponentialFactor = exponentialFactor;
     }
 
     public void setEnableConditionalCreate(boolean enableConditionalCreate) {

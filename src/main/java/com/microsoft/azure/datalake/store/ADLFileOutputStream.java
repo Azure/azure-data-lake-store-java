@@ -159,7 +159,7 @@ public class ADLFileOutputStream extends OutputStream {
             origsyncFlag=SyncFlag.CLOSE;
         }
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = client.makeExponentialBackoffPolicy();
         opts.timeout = client.timeout + (1000 + (buffer.length / 1000 / 1000)); // 1 second grace per MB to upload
         OperationResponse resp = new OperationResponse();
         Core.append(filename, remoteCursor, buffer, 0, cursor, leaseId,
@@ -202,7 +202,7 @@ public class ADLFileOutputStream extends OutputStream {
 
     private void closehandle() throws IOException{
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = client.makeExponentialBackoffPolicy();
         opts.timeout = client.timeout;
         OperationResponse resp = new OperationResponse();
         Core.append(filename, remoteCursor, null, 0, 0, leaseId,
@@ -216,7 +216,7 @@ public class ADLFileOutputStream extends OutputStream {
     }
     private boolean doZeroLengthAppend(long offset) throws IOException {
         RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.retryPolicy = client.makeExponentialBackoffPolicy();
         OperationResponse resp = new OperationResponse();
         Core.append(filename, offset, null, 0, 0, leaseId, leaseId, SyncFlag.METADATA,
             client, opts, resp);
