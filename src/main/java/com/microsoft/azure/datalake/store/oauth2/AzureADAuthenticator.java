@@ -21,6 +21,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
 import java.util.Hashtable;
+import java.util.UUID;
 
 /**
  * This class provides convenience methods to obtain AAD tokens. While convenient, it is not necessary to
@@ -204,13 +205,18 @@ public class AzureADAuthenticator {
         String httpExceptionMessage = null;
         IOException ex = null;
         boolean succeeded = false;
-
+        String clientRequestId = UUID.randomUUID().toString();
+        int retryCount = 0;
+        if(headers == null){
+            headers = new Hashtable<String, String>();
+        }
         do {
             httperror = 0;
-            requestId = "";
             ex = null;
             try {
+                headers.put("client-request-id", clientRequestId + "."+retryCount);
                 token = getTokenSingleCall(authEndpoint, body, headers, httpMethod);
+                retryCount++;
             } catch (HttpException e) {
                 httperror = e.httpErrorCode;
                 requestId = e.requestId;
@@ -238,6 +244,8 @@ public class AzureADAuthenticator {
         if (httpMethod.equals("GET")) {
             urlString = urlString + "?" + payload;
         }
+        long startTime = System.nanoTime();
+        long totalTime = 0;
 
         try {
             URL url = new URL(urlString);
@@ -251,6 +259,7 @@ public class AzureADAuthenticator {
                     conn.setRequestProperty(name, headers.get(name));
                 }
             }
+
             conn.setRequestProperty("Connection", "close");
 
             if (httpMethod.equals("POST")) {
@@ -262,13 +271,27 @@ public class AzureADAuthenticator {
             String requestId = conn.getHeaderField("x-ms-request-id");
             String responseContentType = conn.getHeaderField("Content-Type");
             long responseContentLength = conn.getHeaderFieldLong("Content-Length", 0);
-
             requestId = requestId == null ? "" : requestId;
+
             if (httpResponseCode == 200 && responseContentType.startsWith("application/json") && responseContentLength > 0) {
                 InputStream httpResponseStream = conn.getInputStream();
                 token = parseTokenFromStream(httpResponseStream);
+
+                if (log.isDebugEnabled()) {
+                    totalTime = System.nanoTime() - startTime;
+                    String logMessage =
+                            "AADToken: HTTP connection succeeded for getting token from AzureAD. Http response: "
+                                    + httpResponseCode + " " + conn.getResponseMessage()
+                                    + " Content-Type: " + responseContentType
+                                    + " Content-Length: " + responseContentLength
+                                    + " Request ID: " + requestId.toString()
+                                    + " Client Request Id: " + headers.get("client-request-id")
+                                    + " Latency(ns) : " + totalTime;
+                    log.debug(logMessage);
+                }
             } else {
                 String responseBody = consumeInputStream(conn.getInputStream(), 1024);
+                totalTime = System.nanoTime() - startTime;
                 String proxies = "none";
                 String httpProxy=System.getProperty("http.proxy");
                 String httpsProxy=System.getProperty("https.proxy");
@@ -281,12 +304,23 @@ public class AzureADAuthenticator {
                         + " Content-Type: " + responseContentType
                         + " Content-Length: " + responseContentLength
                         + " Request ID: " + requestId.toString()
+                        + " Client Request Id: " + headers.get("client-request-id")
+                        + " Latency(ns) : " + totalTime
                         + " Proxies: " + proxies
                         + " First 1K of Body: " + responseBody;
                 log.debug(logMessage);
                 throw new HttpException(httpResponseCode, requestId, logMessage);
             }
-        } finally {
+        } catch(IOException e) {
+            totalTime = System.nanoTime() - startTime;
+            String logMessage =
+                    "AADToken: HTTP connection failed for getting token from AzureAD due to timeout. "
+                    + " Client Request Id :" + headers.get("client-request-id")
+                    + " Latency(ns) : " + totalTime;
+            log.debug(logMessage);
+            throw new IOException(logMessage, e);
+        }
+        finally {
             if (conn != null) conn.disconnect();
         }
         return token;
