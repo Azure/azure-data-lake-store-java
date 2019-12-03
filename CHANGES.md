@@ -1,4 +1,9 @@
 # Changes to the SDK
+
+### Version 2.3.8
+1. Add logging for token acquisition.
+2. Allow user configured retry count, interval, and exponential factor for ExponentialBackoffPolicy
+
 ### Version 2.3.7
 1. Implement create with overwrite using conditional delete. Enable this based on config.
 
