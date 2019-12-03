@@ -4,7 +4,7 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>azure-data-lake-store-sdk</artifactId>
-  <version>2.3.7</version>
+  <version>2.3.8</version>
   <packaging>jar</packaging>
   <name>Azure Data Lake Store - Java client SDK</name>
   <url>https://azure.microsoft.com/en-us/services/data-lake-store</url>
