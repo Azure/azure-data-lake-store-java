@@ -58,7 +58,7 @@ public abstract class AccessTokenProvider {
      *
      * @return true if the token is expiring in next 5 minutes
      */
-    private boolean isTokenAboutToExpire() {
+    protected boolean isTokenAboutToExpire() {
         if (token==null) {
             log.debug("AADToken: no token. Returning expiring=true");
             return true;   // no token should have same response as expired token
@@ -67,11 +67,11 @@ public abstract class AccessTokenProvider {
             log.debug("AADToken: no token expiry set. Returning expiring=true");
             return true; // if don't know expiry then assume expired (should not happen with a correctly implemented token)
         }
-        boolean expiring = false;
-        long approximatelyNow = System.currentTimeMillis() + FIVE_MINUTES;   // allow 5 minutes for clock skew
-        if (token.expiry.getTime() < approximatelyNow) expiring = true;
+        long offset = FIVE_MINUTES;
+        long approximatelyNow = System.currentTimeMillis() + offset;   // allow x minutes for clock skew, depends on type of provider
+        boolean expiring = (token.expiry.getTime() < approximatelyNow);
         if (expiring) {
-            log.debug("AADToken: token expiring: " + token.expiry.toString() + " : Five-minute window: " + new Date(approximatelyNow).toString());
+            log.debug("AADToken: token expiring: " + token.expiry.toString() + " : " + offset + " milliseconds window: " + new Date(approximatelyNow).toString());
         }
 
         return expiring;

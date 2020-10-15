@@ -88,12 +88,12 @@ class ContentSummaryProcessor {
     private void processDirectoryTree(String directoryName) throws IOException {
         int pagesize = ENUMERATION_PAGESIZE;
         ArrayList<DirectoryEntry> list;
-        boolean eol = false;
         String startAfter = null;
-
+        String continuationToken;
         do {
-            list = (ArrayList<DirectoryEntry>) enumerateDirectoryInternal(directoryName, pagesize,
-                    startAfter, null, null);
+            DirectoryEntryListWithContinuationToken directoryEntryListWithContinuationToken = client.enumerateDirectoryInternal(directoryName, pagesize, startAfter,null,null);
+            continuationToken = directoryEntryListWithContinuationToken.getContinuationToken();
+            list = (ArrayList<DirectoryEntry>) directoryEntryListWithContinuationToken.getEntries();
             if (list == null || list.size() == 0) break;
             for (DirectoryEntry de : list) {
                 if (de.type == DirectoryEntryType.DIRECTORY) {
@@ -105,7 +105,7 @@ class ContentSummaryProcessor {
                 }
                 startAfter = de.name;
             }
-        } while (list.size() >= pagesize);
+        } while (continuationToken!="");
     }
 
     private void processDirectory(DirectoryEntry de) {
@@ -115,22 +115,5 @@ class ContentSummaryProcessor {
     private void processFile(DirectoryEntry de) {
         fileCount.incrementAndGet();
         totalBytes.addAndGet(de.length);
-    }
-
-    private List<DirectoryEntry> enumerateDirectoryInternal(String path,
-                                                            int maxEntriesToRetrieve,
-                                                            String startAfter,
-                                                            String endBefore,
-                                                            UserGroupRepresentation oidOrUpn)
-            throws IOException {
-        RequestOptions opts = new RequestOptions();
-        opts.retryPolicy = client.makeExponentialBackoffPolicy();
-        OperationResponse resp = new OperationResponse();
-        List<DirectoryEntry> dirEnt = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn,
-                client, opts, resp);
-        if (!resp.successful) {
-            throw client.getExceptionFromResponse(resp, "Error enumerating directory " + path);
-        }
-        return dirEnt;
     }
 }

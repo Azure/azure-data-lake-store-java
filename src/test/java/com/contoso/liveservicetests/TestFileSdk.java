@@ -43,9 +43,16 @@ public class TestFileSdk {
     @BeforeClass
     public static void setup() throws IOException {
         Properties prop = HelperUtils.getProperties();
-        AzureADToken aadToken = AzureADAuthenticator.getTokenUsingClientCreds(prop.getProperty("OAuth2TokenUrl"),
-                prop.getProperty("ClientId"),
-                prop.getProperty("ClientSecret") );
+        boolean useMsiForAuth = Boolean.parseBoolean(prop.getProperty("useMsi","false"));
+        AzureADToken aadToken;
+        if(useMsiForAuth){
+            aadToken = AzureADAuthenticator.getTokenFromMsi(prop.getProperty("OAuth2TokenUrl"), prop.getProperty("ClientId"),false);
+        }
+        else {
+            aadToken = AzureADAuthenticator.getTokenUsingClientCreds(prop.getProperty("OAuth2TokenUrl"),
+                    prop.getProperty("ClientId"),
+                    prop.getProperty("ClientSecret"));
+        }
         UUID guid = UUID.randomUUID();
         directory = "/" + prop.getProperty("dirName") + "/" + UUID.randomUUID();
         String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
@@ -924,7 +931,6 @@ public class TestFileSdk {
 
 
             List<DirectoryEntry> list;
-
             // non-existent directory
             try {
                 list = client.enumerateDirectory(dirname);
