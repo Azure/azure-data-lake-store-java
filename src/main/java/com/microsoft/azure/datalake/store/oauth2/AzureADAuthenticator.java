@@ -329,8 +329,8 @@ public class AzureADAuthenticator {
     private static AzureADToken parseTokenFromStream(InputStream httpResponseStream) throws IOException {
         AzureADToken token = new AzureADToken();
         try {
-            int expiryPeriod = 0;
-
+            int expiryPeriodRelative = 0;
+            long expiryPeriodActual = -1;
             JsonFactory jf = new JsonFactory();
             JsonParser jp = jf.createParser(httpResponseStream);
             String fieldName, fieldValue;
@@ -342,15 +342,24 @@ public class AzureADAuthenticator {
                     fieldValue = jp.getText();
 
                     if (fieldName.equals("access_token")) token.accessToken = fieldValue;
-                    if (fieldName.equals("expires_in")) expiryPeriod = Integer.parseInt(fieldValue);
+                    if (fieldName.equals("expires_in")) expiryPeriodRelative = Integer.parseInt(fieldValue);
+                    if (fieldName.equals("expires_on")) expiryPeriodActual = Integer.parseInt(fieldValue);
                 }
                 jp.nextToken();
             }
             jp.close();
-            long expiry = System.currentTimeMillis();
-            expiry = expiry + expiryPeriod * 1000L; // convert expiryPeriod to milliseconds and add
-            token.expiry = new Date(expiry);
-            log.debug("AADToken: fetched token with expiry " + token.expiry.toString());
+            boolean expiresOn = false;
+            if(expiryPeriodActual>0) {
+                // convert expiryPeriodActual to milliseconds
+                token.expiry = new Date(expiryPeriodActual*1000);
+                expiresOn=true;
+            }
+            else {
+                long expiry = System.currentTimeMillis();
+                expiry = expiry + expiryPeriodRelative * 1000L; // convert expiryPeriod to milliseconds and add
+                token.expiry = new Date(expiry);
+            }
+            log.debug("AADToken: fetched token with expiry " + token.expiry.toString() + " expiresOn passed: "+expiresOn);
         } catch (Exception ex) {
             log.debug("AADToken: got exception when parsing json token " + ex.toString());
             throw ex;
