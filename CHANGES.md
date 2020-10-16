@@ -1,4 +1,8 @@
 # Changes to the SDK
+### Version 2.3.9
+1. Fix the setters in adlstoreoptions to return instance of adlstoreoptions
+2. Fetch MSI token directly from AAD if first fetch from MSI cache is the same expiring token.
+3. Fix getcontentsummary to do enumerates using continuation token
 
 ### Version 2.3.8
 1. Add logging for token acquisition.
