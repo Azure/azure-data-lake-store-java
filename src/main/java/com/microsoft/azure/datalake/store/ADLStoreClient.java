@@ -621,7 +621,7 @@ public class ADLStoreClient {
         return deList;
     }
 
-    private DirectoryEntryListWithContinuationToken enumerateDirectoryInternal(String path,
+    DirectoryEntryListWithContinuationToken enumerateDirectoryInternal(String path,
                                                             int maxEntriesToRetrieve,
                                                             String startAfter,
                                                             String endBefore,
