@@ -9,12 +9,12 @@ package com.microsoft.azure.datalake.store;
 import java.util.Date;
 
 /**
- * filesystem metadata of a directory enrty (a file or a directory) in ADL.
+ * filesystem metadata of a directory entry (a file or a directory) in ADL.
  */
 public class DirectoryEntry {
 
     /**
-     * the filename (minus the path) of the direcotry entry
+     * the filename (minus the path) of the directory entry
      */
     public final String name;
 
