@@ -1,6 +1,6 @@
 # Changes to the SDK
 ### Version 2.3.10
-1. Update og4j to mitigate CVE-2021-44228
+1. Update log4j to mitigate CVE-2021-44228. Also update junit.
 
 ### Version 2.3.9
 1. Fix the setters in adlstoreoptions to return instance of adlstoreoptions
