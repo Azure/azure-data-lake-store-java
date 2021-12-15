@@ -1,6 +1,7 @@
 # Changes to the SDK
 ### Version 2.3.10
 1. Update log4j to mitigate CVE-2021-44228. Also update junit.
+2. ERRATA: This impacts only tests in this repository. SLF4J(See http://slf4j.org/log4shell.html) interface is used for logging and if log4j is available, it can be used depending on customer configuration. The version depends on customer application built using the sdk. Previous versions of sdk(<2.3.10) are not impacted by log4j CVE
 
 ### Version 2.3.9
 1. Fix the setters in adlstoreoptions to return instance of adlstoreoptions
