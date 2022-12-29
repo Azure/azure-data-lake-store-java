@@ -6,6 +6,8 @@
 
 package com.microsoft.azure.datalake.store.retrypolicies;
 
+import java.util.Random;
+
 /**
  * implements different retry decisions based on the error.
  *
@@ -16,7 +18,7 @@ package com.microsoft.azure.datalake.store.retrypolicies;
  * </UL>
  */
 public class ExponentialBackoffPolicy implements RetryPolicy {
-
+	private final Random random = new Random();
     private int retryCount = 0;
     private int maxRetries = 4;
     private int exponentialRetryInterval = 1000;
@@ -87,9 +89,9 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
         if (milliseconds <= 0) {
             return;
         }
-
         try {
-            Thread.sleep(milliseconds);
+			// Sleep a random amount of time to avoid lockstep of simultanseously-launched parallel processes/threads
+            Thread.sleep(milliseconds / 2 + random.nextInt(milliseconds));
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();   // http://www.ibm.com/developerworks/library/j-jtp05236/
         }
