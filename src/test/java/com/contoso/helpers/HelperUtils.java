@@ -20,9 +20,9 @@ public class HelperUtils {
     public static Properties getProperties() throws IOException {
         if (prop==null) {
             Properties defaultProps = new Properties();
-            defaultProps.load(new FileInputStream("target/config.properties"));
+            defaultProps.load(new FileInputStream("target/test-classes/config.properties"));
             prop = new Properties(defaultProps);
-            prop.load(new FileInputStream("target/creds.properties"));
+            prop.load(new FileInputStream("target/test-classes/creds.properties"));
         }
         return prop;
     }
