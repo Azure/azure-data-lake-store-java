@@ -39,6 +39,7 @@ public class TestFileSdk {
     private static String directory = null;
     private static ADLStoreClient client = null;
     private static boolean testsEnabled = true;
+    private static boolean symlinkTestsDisabled = true;
 
     @BeforeClass
     public static void setup() throws IOException {
@@ -60,6 +61,10 @@ public class TestFileSdk {
         testsEnabled = Boolean.parseBoolean(prop.getProperty("SdkTestsEnabled", "true"));
         client.createDirectory(directory);
         client.removeAllAcls(directory);
+
+        if (prop.getProperty("dirName") != null && prop.getProperty("dirName")..toLowerCase().contains("symlink")) {
+            symlinkTestsDisabled = false;
+        }
     }
 
     @AfterClass
@@ -101,7 +106,7 @@ public class TestFileSdk {
         }
         @Test
         public void conditionalDelete() throws IOException, NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String filename = directory + "/" + "Sdk.conditionalDelete.txt";
             OutputStream out = client.createFile(filename, IfExists.FAIL);
             out.close();
@@ -470,7 +475,7 @@ public class TestFileSdk {
 
         @Test
         public void concatSingleFile() throws IOException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String fn1 = directory + "/" + "Sdk.concatSingleFile.txt";
             String fn2 = directory + "/" + "Sdk.concatSingleFile-c.txt";
             System.out.println("Running concatSingleFile");
@@ -520,7 +525,7 @@ public class TestFileSdk {
 
         @Test
         public void concatTwoFiles() throws IOException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String fn1 = directory + "/" + "Sdk.concatTwoFiles-1.txt";
             String fn2 = directory + "/" + "Sdk.concatTwoFiles-2.txt";
             String fnc = directory + "/" + "Sdk.concatTwoFiles-c.txt";
@@ -565,7 +570,7 @@ public class TestFileSdk {
 
         @Test
         public void concatTwoFilesSpecialCharacters() throws IOException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String fn1 = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-1~`!!@#$%^&()-_=+.txt";
             String fn2 = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-2{}[];',..txt  ";
             String fnc = directory + "/" + "Sdk.concatTwoFilesSpecialCharacters-c.txt";
@@ -643,7 +648,7 @@ public class TestFileSdk {
 
         @Test
         public void concatThreeFiles() throws IOException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String fn1 = directory + "/" + "Sdk.concatThreeFiles-1.txt";
             String fn2 = directory + "/" + "Sdk.concatThreeFiles-2.txt";
             String fn3 = directory + "/" + "Sdk.concatThreeFiles-3.txt";
@@ -1082,7 +1087,7 @@ public class TestFileSdk {
 
         @Test
         public void pathPrefix() throws IOException, URISyntaxException {
-            Assume.assumeTrue(testsEnabled);
+            Assume.assumeTrue(symlinkTestsDisabled);
             String prefix = directory + "/" + "pathPrefix";
             System.out.println("Running pathPrefix");
 
