@@ -62,7 +62,7 @@ public class TestFileSdk {
         client.createDirectory(directory);
         client.removeAllAcls(directory);
 
-        if (prop.getProperty("dirName") != null && prop.getProperty("dirName")..toLowerCase().contains("symlink")) {
+        if (prop.getProperty("dirName") != null && prop.getProperty("dirName").toLowerCase().contains("symlink")) {
             symlinkTestsDisabled = false;
         }
     }
