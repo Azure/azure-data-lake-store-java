@@ -62,6 +62,7 @@ public class TestFileSdk {
         client.createDirectory(directory);
         client.removeAllAcls(directory);
 
+        // Certain tests are expected to fail during the Symlink Run because some APIs are not supported over Symlinks. Therefore, we need to skip those tests.
         if (prop.getProperty("dirName") != null && prop.getProperty("dirName").toLowerCase().contains("symlink")) {
             symlinkTestsDisabled = false;
         }
