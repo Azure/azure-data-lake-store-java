@@ -15,10 +15,12 @@ import com.microsoft.azure.datalake.store.retrypolicies.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.UUID;
@@ -273,7 +275,7 @@ public class AzureADAuthenticator {
             long responseContentLength = conn.getHeaderFieldLong("Content-Length", 0);
             requestId = requestId == null ? "" : requestId;
 
-            if (httpResponseCode == 200 && responseContentType.startsWith("application/json") && responseContentLength > 0) {
+            if (httpResponseCode == 200 && responseContentType.startsWith("application/json")) {
                 InputStream httpResponseStream = conn.getInputStream();
                 token = parseTokenFromStream(httpResponseStream);
 
@@ -284,13 +286,13 @@ public class AzureADAuthenticator {
                                     + httpResponseCode + " " + conn.getResponseMessage()
                                     + " Content-Type: " + responseContentType
                                     + " Content-Length: " + responseContentLength
-                                    + " Request ID: " + requestId.toString()
+                                    + " Request ID: " + requestId
                                     + " Client Request Id: " + headers.get("client-request-id")
                                     + " Latency(ns) : " + totalTime;
                     log.debug(logMessage);
                 }
             } else {
-                String responseBody = consumeInputStream(conn.getInputStream(), 1024);
+                String responseBody = new String(readAllBytes(conn.getInputStream()), StandardCharsets.UTF_8);
                 totalTime = System.nanoTime() - startTime;
                 String proxies = "none";
                 String httpProxy=System.getProperty("http.proxy");
@@ -369,20 +371,32 @@ public class AzureADAuthenticator {
         return token;
     }
 
-    private static String consumeInputStream(InputStream inStream, int length) throws IOException {
-        byte[] b = new byte[length];
-        int totalBytesRead = 0;
-        int bytesRead = 0;
+    private static byte[] readAllBytes(InputStream inputStream) throws IOException {
+        final int bufLen = 4 * 0x400; // 4KB
+        byte[] buf = new byte[bufLen];
+        int readLen;
+        IOException exception = null;
 
-        do {
-            bytesRead = inStream.read(b, totalBytesRead, length - totalBytesRead);
-            if (bytesRead > 0) {
-                totalBytesRead += bytesRead;
+        try {
+            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                while ((readLen = inputStream.read(buf, 0, bufLen)) != -1)
+                    outputStream.write(buf, 0, readLen);
+
+                return outputStream.toByteArray();
             }
-        } while (bytesRead >= 0 && totalBytesRead < length);
-
-        return new String(b, 0, totalBytesRead);
+        } catch (IOException e) {
+            exception = e;
+            throw e;
+        } finally {
+            if (exception == null) inputStream.close();
+            else try {
+                inputStream.close();
+            } catch (IOException e) {
+                exception.addSuppressed(e);
+            }
+        }
     }
 }
+
 
 
