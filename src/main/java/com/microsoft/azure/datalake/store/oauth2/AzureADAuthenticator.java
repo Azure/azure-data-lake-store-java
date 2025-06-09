@@ -148,6 +148,28 @@ public class AzureADAuthenticator {
     }
 
     /**
+     * gets Azure Active Directory token using refresh token
+     *
+     * @param authEndpoint the OAuth 2.0 token endpoint associated with the user's directory
+     *                     (obtain from Active Directory configuration)
+     * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
+     * @param refreshToken the refresh token
+     * @return {@link AzureADToken} obtained using the refresh token
+     * @throws IOException throws IOException if there is a failure in connecting to Azure AD
+     */
+    public static AzureADToken getTokenUsingRefreshToken(String authEndpoint, String clientId, String refreshToken)
+            throws IOException
+    {
+        QueryParams qp = new QueryParams();
+        qp.add("grant_type", "refresh_token");
+        qp.add("refresh_token", refreshToken);
+        if (clientId != null) qp.add("client_id", clientId);
+        log.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId );
+
+        return getTokenCall(authEndpoint, qp.serialize());
+    }
+
+    /**
      * gets Azure Active Directory token using the user's username and password. This only
      * works if the identity can be authenticated directly by microsoftonline.com. It will likely
      * not work if the domain is federated and/or multi-factor authentication or other form of
