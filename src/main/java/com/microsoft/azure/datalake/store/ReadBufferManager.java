@@ -47,7 +47,6 @@ class ReadBufferManager {
     private final static int numThreads  = 8;
     private final static int thresholdAgeMilliseconds = 3000; // have to see if 3 seconds is a good threshold
 
-    private Thread[] threads = new Thread[numThreads];
     private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
     private Stack<Integer> freeList = new Stack<Integer>();   // indices in buffers[] array that are available
 
@@ -72,9 +71,8 @@ class ReadBufferManager {
             freeList.add(i);
         }
         for (int i = 0; i < numThreads; i++) {
-            Thread t = new Thread(new ReadBufferWorker(i));
+            Thread t = new Thread(new ReadBufferWorker());
             t.setDaemon(true);
-            threads[i] = t;
             t.setName("ADLS-prefetch-" + i);
             t.start();
         }

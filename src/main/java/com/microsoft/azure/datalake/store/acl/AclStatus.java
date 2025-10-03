@@ -10,11 +10,16 @@ package com.microsoft.azure.datalake.store.acl;
 import java.util.List;
 
 /**
- * Object returned by the {@link com.microsoft.azure.datalake.store.ADLStoreClient#getAclStatus(String)}  getAclStatus}
- * call, that contains the Acl and Permission information for that file or directory.
- *
+ * Result containing the ACL and permission details for a given file or directory as returned by
+ * {@link com.microsoft.azure.datalake.store.ADLStoreClient#getAclStatus(String)}.
  */
 public class AclStatus {
+    /**
+     * Creates an empty status container whose fields can be populated by a service response.
+     */
+    public AclStatus() {
+    }
+
     /**
      * {@code List<AclEntry>} containing the list of Acl entries for a file
      */

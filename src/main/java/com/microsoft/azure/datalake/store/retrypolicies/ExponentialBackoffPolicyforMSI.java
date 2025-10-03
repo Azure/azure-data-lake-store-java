@@ -23,6 +23,9 @@ public class ExponentialBackoffPolicyforMSI implements RetryPolicy {
     private int exponentialFactor = 4;
     private long lastAttemptStartTime = System.nanoTime();
 
+    /**
+     * Creates a policy using the default retry counts and intervals.
+     */
     public ExponentialBackoffPolicyforMSI() {
     }
 
@@ -38,7 +41,13 @@ public class ExponentialBackoffPolicyforMSI implements RetryPolicy {
         this.exponentialFactor = exponentialFactor;
     }
 
-
+    /**
+     * Determines whether another retry should be attempted for the supplied HTTP response code and exception.
+     *
+     * @param httpResponseCode HTTP status code received from the service.
+     * @param lastException exception thrown during the last attempt, if any.
+     * @return {@code true} when a retry should be attempted; otherwise {@code false}.
+     */
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
 
         // Non-retryable error

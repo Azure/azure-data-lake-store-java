@@ -77,13 +77,13 @@ public class TestSdkMock {
         }
         long end = System.currentTimeMillis();
 
-        long duration = end - start;
-        long expectedDuration = 85 * 1000;
-        long expectedDurationMin = expectedDuration - 1000;
-        long expectedDurationMax = expectedDuration + 1000;
+    long duration = end - start;
+    long expectedDuration = 85 * 1000;
+    long expectedDurationMin = expectedDuration - 1000;
+    long expectedDurationMax = expectedDuration + 1000;
 
-        assertTrue("Total time was more than max duration expected", expectedDuration < expectedDurationMax);
-        assertTrue("Total time was less than min duration expected", expectedDuration > expectedDurationMin);
+    assertTrue("Total time was more than max duration expected", duration < expectedDurationMax);
+    assertTrue("Total time was less than min duration expected", duration > expectedDurationMin);
     }
 
     @Test
@@ -148,7 +148,6 @@ public class TestSdkMock {
 
     @Test
     public void testConnectionReset() throws IOException {
-        Assume.assumeTrue(false);  // test half-done
         String filename = directory + "/" + "Mock.testConnectionReset";
 
         server.enqueue(new MockResponse().setResponseCode(200)); // the first empty CREATE request

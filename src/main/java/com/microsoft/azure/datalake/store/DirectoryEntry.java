@@ -88,6 +88,23 @@ public class DirectoryEntry {
 
     final String fileContextId ;
 
+    /**
+     * Creates a directory entry populated with the metadata returned from the service.
+     *
+     * @param name short name of the entry without the parent path.
+     * @param fullName fully qualified path of the entry.
+     * @param length length of the file in bytes.
+     * @param group owning group identifier.
+     * @param user owning user identifier.
+     * @param lastAccessTime timestamp of the last access operation.
+     * @param lastModifiedTime timestamp of the last modification.
+     * @param type entry type (file or directory).
+     * @param blocksize logical block size reported by the service.
+     * @param replicationFactor replication factor reported by the service.
+     * @param permission unix-style permission string for the entry.
+     * @param aclBit {@code true} when ACLs are set on the entry.
+     * @param expiryTime time at which the file expires, or {@code null} if none.
+     */
     public DirectoryEntry(String name,
                    String fullName,
                    long length,

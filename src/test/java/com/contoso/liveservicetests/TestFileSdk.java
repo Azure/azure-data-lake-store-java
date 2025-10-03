@@ -6,11 +6,10 @@
 
 package com.contoso.liveservicetests;
 
+import com.azure.core.credential.TokenCredential;
 import com.contoso.helpers.HelperUtils;
 import com.microsoft.azure.datalake.store.*;
 
-import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
-import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import org.junit.AfterClass;
 import org.junit.Assume;
@@ -30,35 +29,35 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 @RunWith(Enclosed.class)
 public class TestFileSdk {
-    private final UUID instanceGuid = UUID.randomUUID();
-
     private static String directory = null;
     private static ADLStoreClient client = null;
     private static boolean testsEnabled = true;
     private static boolean symlinkTestsDisabled = true;
 
+    private TestFileSdk() {
+        throw new AssertionError("Utility class");
+    }
+
     @BeforeClass
     public static void setup() throws IOException {
         Properties prop = HelperUtils.getProperties();
-        boolean useMsiForAuth = Boolean.parseBoolean(prop.getProperty("useMsi","false"));
-        AzureADToken aadToken;
-        if(useMsiForAuth){
-            aadToken = AzureADAuthenticator.getTokenFromMsi(prop.getProperty("OAuth2TokenUrl"), prop.getProperty("ClientId"),false);
-        }
-        else {
-            aadToken = AzureADAuthenticator.getTokenUsingClientCreds(prop.getProperty("OAuth2TokenUrl"),
-                    prop.getProperty("ClientId"),
-                    prop.getProperty("ClientSecret"));
-        }
-        UUID guid = UUID.randomUUID();
-        directory = "/" + prop.getProperty("dirName") + "/" + UUID.randomUUID();
-        String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
-        client = ADLStoreClient.createClient(account, aadToken.accessToken);
         testsEnabled = Boolean.parseBoolean(prop.getProperty("SdkTestsEnabled", "true"));
+        String storeAccount = prop.getProperty("StoreAcct");
+        if (!testsEnabled || storeAccount == null || storeAccount.trim().isEmpty()) {
+            Assume.assumeTrue("Skipping TestFileSdk live tests", false);
+        }
+        TokenCredential credential = HelperUtils.buildCredential(prop);
+        directory = "/" + prop.getProperty("dirName") + "/" + UUID.randomUUID();
+        String account = storeAccount + ".azuredatalakestore.net";
+        client = ADLStoreClient.createClient(account, credential);
         client.createDirectory(directory);
         client.removeAllAcls(directory);
 
@@ -70,10 +69,13 @@ public class TestFileSdk {
 
     @AfterClass
     public static void teardown() throws IOException {
-        client.deleteRecursive(directory);
+        if (client != null && directory != null) {
+            client.deleteRecursive(directory);
+        }
     }
     public static class NotParameterizedTests
     {
+        private static final int MAX_FILE_CREATION_THREADS = 16;
         @Test
         public void createDirectory() throws IOException {
             Assume.assumeTrue(testsEnabled);
@@ -931,10 +933,8 @@ public class TestFileSdk {
         @Test
         public void enumerateDirectory() throws IOException {
             Assume.assumeTrue(testsEnabled);
-            Assume.assumeTrue(false);  // disable test for now; this is very long-running
             String dirname = directory + "/" + "enumerateDirectory";
             System.out.println("Running enumerateDirectory");
-
 
             List<DirectoryEntry> list;
             // non-existent directory
@@ -951,7 +951,6 @@ public class TestFileSdk {
             assertTrue("empty directory should return 0 entries", list.size() == 0);
             list = client.enumerateDirectory(dirname, 1);
             assertTrue("empty directory should return 0 entries even with listsize", list.size() == 0);
-
 
             // directory with single file
             String fn = dirname + "/f0001.txt";
@@ -977,10 +976,11 @@ public class TestFileSdk {
             assertTrue("directory of 2 should return 1 entry with startAfter", list.size() == 1);
 
             // 1000-file directory
-            for (int i = 3; i<=1000; i++) {
-                fn = dirname + "/f" + String.format("%04d", i);
-                HelperUtils.createEmptyFile(client, fn);
+            List<String> filesToCreate = new ArrayList<>(998);
+            for (int i = 3; i <= 1000; i++) {
+                filesToCreate.add(dirname + "/f" + String.format("%04d", i));
             }
+            createFilesInParallel(filesToCreate, name -> HelperUtils.createEmptyFile(client, name));
             list = client.enumerateDirectory(dirname);
             assertTrue("directory of 1000 should return 1000 entries", list.size() == 1000);
             list = client.enumerateDirectory(dirname, 1);
@@ -995,10 +995,11 @@ public class TestFileSdk {
             assertTrue("directory of 1000 should return 500 entries with startAfter f0500", list.size() == 500);
 
             // 4000-file directory
-            for (int i = 1001; i<=4000; i++) {
-                fn = dirname + "/f" + String.format("%04d", i);
-                HelperUtils.createEmptyFile(client, fn);
+            filesToCreate = new ArrayList<>(3000);
+            for (int i = 1001; i <= 4000; i++) {
+                filesToCreate.add(dirname + "/f" + String.format("%04d", i));
             }
+            createFilesInParallel(filesToCreate, name -> HelperUtils.createEmptyFile(client, name));
             list = client.enumerateDirectory(dirname);
             assertTrue("directory of 4000 should return 4000 entries", list.size() == 4000);
             list = client.enumerateDirectory(dirname, 1);
@@ -1147,6 +1148,44 @@ public class TestFileSdk {
             // delete file
             client.delete(fn4);
         }
+
+    // Fan out large batches of file creation to shrink end-to-end test time.
+    private static void createFilesInParallel(List<String> filenames, ThrowingConsumer<String> fileCreator) throws IOException {
+            if (filenames == null || filenames.isEmpty()) {
+                return;
+            }
+            int targetThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
+            int threads = Math.min(MAX_FILE_CREATION_THREADS, Math.min(filenames.size(), targetThreads * 2));
+            ExecutorService executor = Executors.newFixedThreadPool(threads);
+            try {
+                List<Future<Void>> futures = new ArrayList<>(filenames.size());
+                for (String name : filenames) {
+                    futures.add(executor.submit(() -> {
+                        fileCreator.accept(name);
+                        return null;
+                    }));
+                }
+                for (Future<Void> future : futures) {
+                    future.get();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while creating files in parallel", e);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IOException) {
+                    throw (IOException) cause;
+                }
+                throw new IOException("Failed to create files in parallel", cause);
+            } finally {
+                executor.shutdown();
+            }
+        }
+
+        @FunctionalInterface
+        private interface ThrowingConsumer<T> {
+            void accept(T value) throws IOException;
+        }
     }
     @RunWith(value = Parameterized.class)
     public static class TestCreateWithOverwrite {
@@ -1158,6 +1197,7 @@ public class TestFileSdk {
         }
         @Parameter
         public boolean useConditionalCreate;
+
         @Test
         public void smallFileWithOverwrite() throws IOException {
             Assume.assumeTrue(testsEnabled);

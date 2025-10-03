@@ -526,7 +526,7 @@ public class Core {
             jp.nextToken();
             while (jp.hasCurrentToken()) {
                 if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                    fieldName = jp.getCurrentName();
+                    fieldName = jp.currentName();
                     jp.nextToken();
                     fieldValue = jp.getText();
 
@@ -723,7 +723,7 @@ public class Core {
                 jp.nextToken();
                 while (jp.hasCurrentToken()) {
                     if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                        fieldName = jp.getCurrentName();
+                        fieldName = jp.currentName();
                         jp.nextToken();
                         fieldValue = jp.getText();
 
@@ -943,7 +943,7 @@ public class Core {
                                     list.add(entry);
                                 }
                                 if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                                    fieldName = jp.getCurrentName();
+                                    fieldName = jp.currentName();
                                     jp.nextToken();
                                     fieldValue = jp.getText();
 
@@ -1116,6 +1116,13 @@ public class Core {
     }
 
     private static final Pattern octalPattern = Pattern.compile("[01]?[0-7]?[0-7]?[0-7]");
+
+    /**
+     * Checks whether the supplied string is a valid octal permission specification understood by the service.
+     *
+     * @param input candidate permission string to validate.
+     * @return {@code true} when the input matches the expected octal pattern; otherwise {@code false}.
+     */
     public static boolean isValidOctal(String input) {
         return octalPattern.matcher(input).matches();
     }
@@ -1417,7 +1424,7 @@ public class Core {
                 jp.nextToken();
                 while (jp.hasCurrentToken()) {
                     if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                        fieldName = jp.getCurrentName();
+                        fieldName = jp.currentName();
                         if (fieldName.equals("entries")) {
                             jp.nextToken();  // START_ARRAY - [
                             jp.nextToken();

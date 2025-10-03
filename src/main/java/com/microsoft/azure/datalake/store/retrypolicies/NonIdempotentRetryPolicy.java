@@ -26,6 +26,19 @@ public class NonIdempotentRetryPolicy implements RetryPolicy {
     private int exponentialFactor = 4;
 
 
+    /**
+     * Creates a retry policy that only retries once for 401 responses and a limited number of times for 429 responses.
+     */
+    public NonIdempotentRetryPolicy() {
+    }
+
+    /**
+     * Determines whether another retry should be attempted for the supplied HTTP response code and exception.
+     *
+     * @param httpResponseCode HTTP status code received from the service.
+     * @param lastException exception thrown during the last attempt, if any.
+     * @return {@code true} when a retry should be attempted; otherwise {@code false}.
+     */
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
         if (httpResponseCode == 401 && retryCount401 == 0) {
             // this could be because of call delay. Just retry once, in hope of token being renewed by now

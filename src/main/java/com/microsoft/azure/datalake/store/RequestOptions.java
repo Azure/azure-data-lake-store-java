@@ -14,6 +14,12 @@ import com.microsoft.azure.datalake.store.retrypolicies.RetryPolicy;
  */
 public class RequestOptions {
     /**
+     * Creates a new set of request options populated with default values.
+     */
+    public RequestOptions() {
+    }
+
+    /**
      * the timeout (in milliseconds) to use for the request. This is used for both
      * the readTimeout and the connectTimeout for the request, so
      * in effect the actual timout is two times the specified timeout.

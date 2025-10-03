@@ -31,6 +31,9 @@ public class ADLStoreOptions {
     static final int DEFAULT_EXPONENTIAL_FACTOR = 4;
     private boolean enableConditionalCreate = false;
 
+    /**
+     * Creates a new options instance with the SDK defaults applied.
+     */
     public ADLStoreOptions() {
     }
 
@@ -173,6 +176,7 @@ public class ADLStoreOptions {
      * If set to false then SDK would use default cipher suite.
      *
      * @param alterCipherSuits true if the cipher suite alteration is required.
+     * @return {@code this}
      */
     public ADLStoreOptions alterCipherSuits(boolean alterCipherSuits) {
         this.alterCipherSuits = alterCipherSuits;
@@ -184,9 +188,10 @@ public class ADLStoreOptions {
     }
 
     /**
-     * Set SSL Channel mode
-     * @param sslChannelMode  SSL Channel mdoe to set
-     * @return
+     * Sets the SSL channel mode used by the transport layer.
+     *
+     * @param sslChannelMode name of the {@link SSLChannelMode} to apply.
+     * @return {@code this}
      */
     public ADLStoreOptions setSSLChannelMode(String sslChannelMode) {
         SSLChannelMode[] sslChannelModes = SSLChannelMode.values();
@@ -212,9 +217,10 @@ public class ADLStoreOptions {
     }
     
     /**
-     * sets the number of retries for exponential retry policy used by methods in ADLStoreClient objects
-     * @param maxRetries number of retries for exponential retry policy
+     * Sets the number of retries for the exponential retry policy used by client operations.
      *
+     * @param maxRetries number of retries for exponential retry policy
+     * @return {@code this}
      */
     public ADLStoreOptions setMaxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
@@ -226,9 +232,10 @@ public class ADLStoreOptions {
     }
 
     /**
-     * sets the retry interval for exponential retry policy used by methods in ADLStoreClient objects
-     * @param exponentialRetryInterval retry interval for exponential retry policy in milliseconds
+     * Sets the initial retry interval for the exponential retry policy used by client operations.
      *
+     * @param exponentialRetryInterval retry interval for exponential retry policy in milliseconds
+     * @return {@code this}
      */
     public ADLStoreOptions setExponentialRetryInterval(int exponentialRetryInterval) {
         this.exponentialRetryInterval = exponentialRetryInterval;
@@ -240,9 +247,10 @@ public class ADLStoreOptions {
     }
 
     /**
-     * sets the factor of backoff for exponential retry policy used by methods in ADLStoreClient objects
-     * @param exponentialFactor retry backoff factor for exponential retry policy
+     * Sets the multiplier applied on each retry attempt for the exponential retry policy.
      *
+     * @param exponentialFactor retry backoff factor for exponential retry policy
+     * @return {@code this}
      */
     public ADLStoreOptions setExponentialFactor(int exponentialFactor) {
         this.exponentialFactor = exponentialFactor;
@@ -252,7 +260,7 @@ public class ADLStoreOptions {
     /**
      * Config to enable create only if conditional delete has passed
      * @param enableConditionalCreate boolean value to set
-     * @return
+     * @return {@code this}
      */
     public ADLStoreOptions setEnableConditionalCreate(boolean enableConditionalCreate) {
         this.enableConditionalCreate = enableConditionalCreate;

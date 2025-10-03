@@ -8,21 +8,33 @@ package com.microsoft.azure.datalake.store.acl;
 
 /**
  * Specifies the possible combinations of actions allowed in an ACL.
- *
  */
 public enum AclAction {
+    /** No permissions are granted. */
     NONE          ("---"),
+    /** Execute permission only. */
     EXECUTE       ("--x"),
+    /** Write permission only. */
     WRITE         ("-w-"),
+    /** Write and execute permissions. */
     WRITE_EXECUTE ("-wx"),
+    /** Read permission only. */
     READ          ("r--"),
+    /** Read and execute permissions. */
     READ_EXECUTE  ("r-x"),
+    /** Read and write permissions. */
     READ_WRITE    ("rw-"),
+    /** All permissions (read, write, and execute). */
     ALL           ("rwx");
 
     private final String rwx;
     private static final AclAction[] values = AclAction.values();
 
+    /**
+     * Creates a new {@code AclAction} with the provided rwx representation.
+     *
+     * @param rwx Unix-style permission triplet corresponding to the action.
+     */
     AclAction(String rwx) {
         this.rwx = rwx;
     }

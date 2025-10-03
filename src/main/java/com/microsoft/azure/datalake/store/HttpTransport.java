@@ -33,6 +33,10 @@ import java.util.UUID;
  */
 class HttpTransport {
 
+    private HttpTransport() {
+        throw new AssertionError("Utility class");
+    }
+
     private static final String API_VERSION = "2018-12-01"; // API version used in REST requests
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport");
     private static final Logger tokenlog = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.HttpTransport.tokens");
@@ -87,6 +91,10 @@ class HttpTransport {
             opts.requestid = clientRequestId + "." + Integer.toString(retryCount);
             resp.reset();
             long start = System.nanoTime();
+            if (log.isInfoEnabled()) {
+                log.info("ADLS request start op={} path={} clientId={} timeout={}ms retry={}" ,
+                        op.name, path, client.getClientId(), opts.timeout, retryCount);
+            }
             makeSingleCall(client, op, path, queryParams, requestBody, offsetWithinContentsArray, length, opts, resp);
             resp.lastCallLatency = System.nanoTime() - start;
             resp.lastCallLatency = resp.lastCallLatency / 1000000;   // convert from nanoseconds to milliseconds
@@ -111,6 +119,10 @@ class HttpTransport {
                         length, client.getClientId());
                 retryCount++;
                 resp.exceptionHistory = resp.exceptionHistory == null ? error : resp.exceptionHistory + "," + error;
+            }
+            if (log.isInfoEnabled()) {
+                log.info("ADLS request end op={} path={} clientId={} status={} httpCode={} latency={}ms error={}",
+                        op.name, path, client.getClientId(), outcome, resp.httpResponseCode, resp.lastCallLatency, error);
             }
             if (log.isDebugEnabled()) {
                 String logline =
@@ -241,7 +253,7 @@ class HttpTransport {
 
         URL url;
         try {
-            url = new URL(urlString.toString());
+            url = URI.create(urlString.toString()).toURL();
         } catch (MalformedURLException ex) {
             resp.ex = ex;
             resp.successful = false;
@@ -371,7 +383,7 @@ class HttpTransport {
             jp.nextToken();
             while (jp.hasCurrentToken()) {
                 if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-                    fieldName = jp.getCurrentName();
+                    fieldName = jp.currentName();
                     jp.nextToken();
                     fieldValue = jp.getText();
 

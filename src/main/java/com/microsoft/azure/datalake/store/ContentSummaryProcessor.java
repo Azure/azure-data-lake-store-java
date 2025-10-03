@@ -5,13 +5,8 @@
  */
 
 package com.microsoft.azure.datalake.store;
-
-
-import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

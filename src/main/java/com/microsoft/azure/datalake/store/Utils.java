@@ -5,8 +5,6 @@
  */
 
 package com.microsoft.azure.datalake.store;
-
-import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 
 import java.io.*;

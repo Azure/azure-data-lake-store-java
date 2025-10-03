@@ -16,8 +16,11 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.logging.Level;
@@ -28,13 +31,15 @@ import java.util.logging.Level;
  */
 public class SSLSocketFactoryEx extends SSLSocketFactory {
 
+  /**
+   * Defines which SSL implementation should be used for outbound connections.
+   */
   public enum SSLChannelMode {
+    /** Always use the native OpenSSL provider. */
     OpenSSL,
-    /**
-     * Ordered, preferred OpenSSL, if failed to load then fall back to
-     * Default_JSE
-     */
+    /** Prefer the native OpenSSL provider, falling back to the JDK implementation on failure. */
     Default,
+    /** Always use the JDK SSL implementation. */
     Default_JSE
   }
 
@@ -47,6 +52,13 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
   private String[] m_ciphers;
   private SSLChannelMode channelMode;
 
+  /**
+   * Returns a cached {@link SSLSocketFactoryEx} configured for the requested SSL channel mode.
+   *
+   * @param sslChannelMode SSL implementation preference.
+   * @return shared socket factory instance.
+   * @throws IOException when the SSL context cannot be initialized.
+   */
   public static SSLSocketFactoryEx getDefaultFactory(SSLChannelMode sslChannelMode) throws IOException {
     if (instance == null) {
       synchronized (lock) {
@@ -63,6 +75,12 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
     OpenSSLProvider.register();
   }
 
+  /**
+   * Creates a new socket factory honoring the specified SSL channel mode.
+   *
+   * @param channelMode SSL implementation preference.
+   * @throws IOException when the SSL context cannot be initialized.
+   */
   public SSLSocketFactoryEx(SSLChannelMode channelMode) throws IOException {
     this.channelMode = channelMode;
     try {
@@ -73,9 +91,15 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
       throw new IOException(e);
     }
 
-    userAgent = m_ctx.getProvider().getName() + "-" + m_ctx.getProvider().getVersion();
+    Provider provider = m_ctx.getProvider();
+    userAgent = provider.getName() + "-" + resolveProviderVersion(provider);
   }
 
+  /**
+   * Returns the user-agent string describing the active SSL provider.
+   *
+   * @return user-agent fragment identifying the SSL provider.
+   */
   public String getUserAgent() {
     return userAgent;
   }
@@ -204,5 +228,24 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
 
     m_ciphers = preferredSuits.toArray(new String[0]);
     return m_ciphers;
+  }
+
+  private String resolveProviderVersion(Provider provider) {
+    try {
+      Method versionMethod = Provider.class.getMethod("getVersionStr");
+      Object version = versionMethod.invoke(provider);
+      if (version != null) {
+        return version.toString();
+      }
+    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+      // fall back to other mechanisms when version string is unavailable
+    }
+
+    Object versionProperty = provider.get("ProviderVersion");
+    if (versionProperty != null) {
+      return versionProperty.toString();
+    }
+
+    return provider.getInfo();
   }
 }

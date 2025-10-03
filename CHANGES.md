@@ -1,4 +1,9 @@
 # Changes to the SDK
+### Version 3.0.0
+1. Replaced custom OAuth2 implementation with Azure Identity `TokenCredential` support.
+2. Updated `ADLStoreClient` factory methods to accept Azure Identity credentials and added dependency on `com.azure:azure-identity` 1.17.0.
+3. Updated live service tests to authenticate with `DefaultAzureCredential`.
+
 ### Version 2.3.10
 1. Update log4j to mitigate CVE-2021-44228. Also update junit.
 2. ERRATA: This impacts only tests in this repository. SLF4J(See http://slf4j.org/log4shell.html) interface is used for logging and if log4j is available, it can be used depending on customer configuration. The version depends on customer application built using the sdk. Previous versions of sdk(<2.3.10) are not impacted by log4j CVE

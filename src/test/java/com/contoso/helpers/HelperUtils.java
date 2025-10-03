@@ -7,14 +7,22 @@
 package com.contoso.helpers;
 
 
+import com.azure.core.credential.TokenCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.microsoft.azure.datalake.store.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 import java.io.*;
+import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Properties;
 
 public class HelperUtils {
+
+    private HelperUtils() {
+        throw new AssertionError("Utility class");
+    }
 
     private static Properties prop = null;
     public static Properties getProperties() throws IOException {
@@ -25,6 +33,32 @@ public class HelperUtils {
             prop.load(new FileInputStream("target/test-classes/creds.properties"));
         }
         return prop;
+    }
+
+    public static TokenCredential buildCredential(Properties prop) {
+        String clientId = trimOrNull(prop.getProperty("ClientId"));
+        String clientSecret = trimOrNull(prop.getProperty("ClientSecret"));
+        String tenantId = trimOrNull(prop.getProperty("TenantId"));
+        if (tenantId == null) {
+            tenantId = tryParseTenantId(prop.getProperty("OAuth2TokenUrl"));
+        }
+
+        if (clientId != null && clientSecret != null && tenantId != null) {
+            ClientSecretCredentialBuilder builder = new ClientSecretCredentialBuilder()
+                    .clientId(clientId)
+                    .clientSecret(clientSecret)
+                    .tenantId(tenantId);
+            String authorityHost = trimOrNull(prop.getProperty("AuthorityHost"));
+            if (authorityHost == null) {
+                authorityHost = tryParseAuthorityHost(prop.getProperty("OAuth2TokenUrl"));
+            }
+            if (authorityHost != null) {
+                builder.authorityHost(authorityHost);
+            }
+            return builder.build();
+        }
+
+        return new DefaultAzureCredentialBuilder().build();
     }
 
     private static byte[] buf4mb = null;
@@ -100,6 +134,53 @@ public class HelperUtils {
         byte[] buf = s.toByteArray();
         return buf;
         // length of returned array is 159 bytes
+    }
+
+    private static String trimOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String tryParseTenantId(String oauthUrl) {
+        if (oauthUrl == null) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(oauthUrl.trim());
+            String path = uri.getPath();
+            if (path == null) {
+                return null;
+            }
+            String[] segments = path.split("/");
+            for (String segment : segments) {
+                if (segment != null && !segment.isEmpty()) {
+                    if ("oauth2".equalsIgnoreCase(segment) || "token".equalsIgnoreCase(segment)) {
+                        continue;
+                    }
+                    return segment;
+                }
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+        return null;
+    }
+
+    private static String tryParseAuthorityHost(String oauthUrl) {
+        if (oauthUrl == null) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(oauthUrl.trim());
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                return null;
+            }
+            return uri.getScheme() + "://" + uri.getHost();
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
 

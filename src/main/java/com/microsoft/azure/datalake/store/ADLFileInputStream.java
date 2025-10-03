@@ -432,8 +432,11 @@ public class ADLFileInputStream extends InputStream {
         streamClosed = true;
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
     }
-
-
+    /**
+     * Returns the fully qualified path for the file backing this stream.
+     *
+     * @return path of the file represented by the stream.
+     */
     public String getFilename() {
         return this.filename;
     }

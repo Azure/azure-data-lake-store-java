@@ -16,6 +16,8 @@ import java.io.IOException;
  */
 public class ADLException extends IOException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * the HTTP response code returned by the server
      */
@@ -65,10 +67,21 @@ public class ADLException extends IOException {
      */
     public String remoteExceptionJavaClassName = null;
 
+    /**
+     * Creates a new exception with the supplied message.
+     *
+     * @param message description of the failure condition.
+     */
     public ADLException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new exception with the supplied message and root cause.
+     *
+     * @param message description of the failure condition.
+     * @param initCause underlying exception that triggered this failure.
+     */
     public ADLException(String message, Throwable initCause) {
         super(message, initCause);
     }

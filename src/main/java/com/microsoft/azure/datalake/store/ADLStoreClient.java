@@ -6,9 +6,11 @@
 
 package com.microsoft.azure.datalake.store;
 
+import com.azure.core.credential.AccessToken;
+import com.azure.core.credential.TokenCredential;
+import com.azure.core.credential.TokenRequestContext;
 import com.microsoft.azure.datalake.store.acl.AclEntry;
 import com.microsoft.azure.datalake.store.acl.AclStatus;
-import com.microsoft.azure.datalake.store.oauth2.*;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
@@ -21,6 +23,9 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -33,8 +38,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ADLStoreClient {
 
     private final String accountFQDN;
-    private String accessToken;
-    private final AccessTokenProvider tokenProvider;
+    private final TokenCredential tokenCredential;
+    private final StaticTokenCredential staticTokenCredential;
+    private AccessToken cachedAccessToken;
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store"); // package-default logging policy
     private static final AtomicLong clientIdCounter = new AtomicLong(0);
     private final long clientId;
@@ -55,6 +61,9 @@ public class ADLStoreClient {
     private int exponentialFactor = ADLStoreOptions.DEFAULT_EXPONENTIAL_FACTOR;
 
     private boolean enableConditionalCreate = false;
+
+    private static final String DATA_LAKE_SCOPE = "https://datalake.azure.net/.default";
+    private static final Duration TOKEN_REFRESH_SKEW = Duration.ofMinutes(5);
 
     private static String sdkVersion = null;
     static {
@@ -100,10 +109,10 @@ public class ADLStoreClient {
 
 
     // private constructor, references should be obtained using the createClient factory method
-    private ADLStoreClient(String accountFQDN, String accessToken, long clientId, AccessTokenProvider tokenProvider) {
+    private ADLStoreClient(String accountFQDN, TokenCredential tokenCredential, StaticTokenCredential staticTokenCredential, long clientId) {
         this.accountFQDN = accountFQDN;
-        this.accessToken = "Bearer " + accessToken;
-        this.tokenProvider = tokenProvider;
+        this.tokenCredential = Objects.requireNonNull(tokenCredential, "tokenCredential cannot be null");
+        this.staticTokenCredential = staticTokenCredential;
         this.clientId = clientId;
         this.userAgentString = userAgent;
     }
@@ -113,19 +122,19 @@ public class ADLStoreClient {
      *
      * @param accountFQDN string containing the fully qualified domain name of the account.
      *                    e.g., contoso.azuredatalakestore.net
-     * @param token {@link AzureADToken} object that contains the AAD token to use
+     * @param tokenCredential {@link TokenCredential} used to acquire AAD tokens
      * @return the client object
      */
-    public static ADLStoreClient createClient(String accountFQDN, AzureADToken token) {
+    public static ADLStoreClient createClient(String accountFQDN, TokenCredential tokenCredential) {
         if (accountFQDN == null || accountFQDN.trim().equals("")) {
             throw new IllegalArgumentException("account name is required");
         }
-        if (token == null || token.accessToken == null || token.accessToken.equals("")) {
-            throw new IllegalArgumentException("token is required");
+        if (tokenCredential == null) {
+            throw new IllegalArgumentException("token credential is required");
         }
         long clientId =  clientIdCounter.incrementAndGet();
         log.trace("ADLStoreClient {} created for {} using SDK version {}", clientId, accountFQDN, sdkVersion);
-        return new ADLStoreClient(accountFQDN, token.accessToken, clientId, null);
+        return new ADLStoreClient(accountFQDN, tokenCredential, null, clientId);
     }
 
     /**
@@ -140,97 +149,14 @@ public class ADLStoreClient {
         if (accountFQDN == null || accountFQDN.trim().equals("")) {
             throw new IllegalArgumentException("account name is required");
         }
-
         if (accessToken == null || accessToken.equals("")) {
             throw new IllegalArgumentException("token is required");
         }
         long clientId =  clientIdCounter.incrementAndGet();
         log.trace("ADLStoreClient {} created for {} using SDK version {}", clientId, accountFQDN, sdkVersion);
-        return new ADLStoreClient(accountFQDN, accessToken, clientId, null);
+        StaticTokenCredential credential = new StaticTokenCredential(accessToken);
+        return new ADLStoreClient(accountFQDN, credential, credential, clientId);
     }
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link AccessTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, AccessTokenProvider tokenProvider) {
-        if (accountFQDN == null || accountFQDN.trim().equals("")) {
-            throw new IllegalArgumentException("account name is required");
-        }
-
-        if (tokenProvider == null) {
-            throw new IllegalArgumentException("token provider is required");
-        }
-        long clientId =  clientIdCounter.incrementAndGet();
-        log.trace("ADLStoreClient {} created for {} using SDK version {}", clientId, accountFQDN, sdkVersion);
-        return new ADLStoreClient(accountFQDN, null, clientId, tokenProvider);
-    }
-
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link ClientCredsTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, ClientCredsTokenProvider tokenProvider) {
-        // just a convenience overload, for easy discoverability in IDE's autocompletion.
-        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);
-    }
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link RefreshTokenBasedTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, RefreshTokenBasedTokenProvider tokenProvider) {
-        // just a convenience overload, for easy discoverability in IDE's autocompletion.
-        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link UserPasswordTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, UserPasswordTokenProvider tokenProvider) {
-        // just a convenience overload, for easy discoverability in IDE's autocompletion.
-        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link DeviceCodeTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, DeviceCodeTokenProvider tokenProvider) {
-        // just a convenience overload, for easy discoverability in IDE's autocompletion.
-        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
-
-    /**
-     * gets an {@code ADLStoreClient} object.
-     *
-     * @param accountFQDN string containing the fully qualified domain name of the account.
-     *                    For example, contoso.azuredatalakestore.net
-     * @param tokenProvider {@link DeviceCodeTokenProvider} that can provide the AAD token
-     * @return the client object
-     */
-    public static ADLStoreClient createClient(String accountFQDN, MsiTokenProvider tokenProvider) {
-        // just a convenience overload, for easy discoverability in IDE's autocompletion.
-        return createClient(accountFQDN, (AccessTokenProvider) tokenProvider);    }
 
     ExponentialBackoffPolicy makeExponentialBackoffPolicy() {
         return new ExponentialBackoffPolicy(maxRetries, 0, exponentialRetryInterval, exponentialFactor);
@@ -1090,20 +1016,26 @@ public class ADLStoreClient {
      *
      * @param token The OAuth2 Token
      */
-    public synchronized void updateToken(AzureADToken token) {
-        log.trace("AAD Token Updated for client client {} for account {}", clientId, accountFQDN);
-        this.accessToken = "Bearer " + token.accessToken;
+    public synchronized void updateToken(AccessToken token) {
+        if (token == null || token.getToken() == null || token.getToken().isEmpty()) {
+            throw new IllegalArgumentException("token is required");
+        }
+        updateToken(token.getToken());
     }
 
     /**
-     * update token on existing client.
+     * update token on existing client when a static token credential is used.
      * This is useful if the client is expected to be used over long time, and token has expired.
      *
      * @param accessToken The AAD Token string
      */
     public synchronized void updateToken(String accessToken) {
+        if (this.staticTokenCredential == null) {
+            throw new UnsupportedOperationException("updateToken is only supported when the client was created with a static access token");
+        }
         log.trace("AAD Token Updated for client client {} for account {}", clientId, accountFQDN);
-        this.accessToken = "Bearer " + accessToken;
+        this.staticTokenCredential.setToken(accessToken);
+        this.cachedAccessToken = this.staticTokenCredential.getCurrentToken();
     }
 
     /* ----------------------------------------------------------------------------------------------------------*/
@@ -1125,11 +1057,22 @@ public class ADLStoreClient {
      * @throws IOException thrown if a token provider is being used and the token provider has problem getting token
      */
     synchronized String getAccessToken() throws IOException {
-        if (tokenProvider != null ) {
-            return "Bearer " + tokenProvider.getToken().accessToken;
-        } else {
-            return accessToken;
+        boolean needsRefresh = cachedAccessToken == null || shouldRefreshAccessToken(cachedAccessToken);
+        if (needsRefresh) {
+            OffsetDateTime previousExpiry = cachedAccessToken == null ? null : cachedAccessToken.getExpiresAt();
+            if (cachedAccessToken == null) {
+                log.info("Client {} acquiring initial access token for {}", clientId, accountFQDN);
+            } else if (previousExpiry != null) {
+                log.info("Client {} refreshing access token expiring at {}", clientId, previousExpiry);
+            } else {
+                log.info("Client {} refreshing access token with unknown expiry", clientId);
+            }
+            cachedAccessToken = acquireAccessToken();
+        } else if (log.isDebugEnabled()) {
+            OffsetDateTime expiry = cachedAccessToken.getExpiresAt();
+            log.debug("Client {} reusing cached access token expiring at {}", clientId, expiry);
         }
+        return "Bearer " + cachedAccessToken.getToken();
     }
 
 
@@ -1293,14 +1236,82 @@ public class ADLStoreClient {
 
     private static IOException getRemoteException(String className, String message) {
         try {
-            Class clazz = Class.forName(className);
-            if (!IOException.class.isAssignableFrom(clazz)) { return new IOException(message); }
-            Constructor c = clazz.getConstructor(String.class);
-            return (IOException) c.newInstance(message);
-                    } catch (Exception ex) {
-                        return new IOException(message);
-                    }
+            Class<?> clazz = Class.forName(className);
+            if (!IOException.class.isAssignableFrom(clazz)) {
+                return new IOException(message);
             }
+            Constructor<? extends IOException> constructor = clazz.asSubclass(IOException.class).getConstructor(String.class);
+            return constructor.newInstance(message);
+        } catch (Exception ex) {
+            return new IOException(message);
+        }
+            }
+
+    private synchronized AccessToken acquireAccessToken() throws IOException {
+        try {
+            log.debug("Client {} requesting token from credential", clientId);
+            AccessToken token = tokenCredential.getTokenSync(createTokenRequestContext());
+            if (token == null || token.getToken() == null || token.getToken().isEmpty()) {
+                throw new IOException("TokenCredential returned an empty access token");
+            }
+            if (log.isInfoEnabled()) {
+                OffsetDateTime expiresAt = token.getExpiresAt();
+                log.info("Client {} acquired access token expiring at {}", clientId, expiresAt);
+            }
+            return token;
+        } catch (RuntimeException ex) {
+            throw new IOException("Failed to acquire token from TokenCredential", ex);
+        }
+    }
+
+    private boolean shouldRefreshAccessToken(AccessToken token) {
+        if (token == null) {
+            return true;
+        }
+        OffsetDateTime expiresAt = token.getExpiresAt();
+        if (expiresAt == null) {
+            return false;
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime refreshOn = expiresAt.minus(TOKEN_REFRESH_SKEW);
+        return !refreshOn.isAfter(now);
+    }
+
+    private TokenRequestContext createTokenRequestContext() {
+        TokenRequestContext context = new TokenRequestContext();
+        context.addScopes(DATA_LAKE_SCOPE);
+        return context;
+    }
+
+    private static final class StaticTokenCredential implements TokenCredential {
+        private static final Duration STATIC_TOKEN_EXPIRY = Duration.ofDays(3650);
+        private volatile AccessToken token;
+
+        private StaticTokenCredential(String accessToken) {
+            setToken(accessToken);
+        }
+
+        @Override
+        public reactor.core.publisher.Mono<AccessToken> getToken(TokenRequestContext request) {
+            AccessToken current = token;
+            if (current == null) {
+                return reactor.core.publisher.Mono.error(new IllegalStateException("Access token not initialized"));
+            }
+            return reactor.core.publisher.Mono.just(current);
+        }
+
+        private synchronized void setToken(String accessToken) {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                throw new IllegalArgumentException("accessToken is required");
+            }
+            OffsetDateTime expires = OffsetDateTime.now(ZoneOffset.UTC).plus(STATIC_TOKEN_EXPIRY);
+            this.token = new AccessToken(accessToken, expires);
+        }
+
+        private AccessToken getCurrentToken() {
+            return token;
+        }
+    }
 
 
 }
