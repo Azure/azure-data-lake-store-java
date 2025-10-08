@@ -9,7 +9,6 @@ package com.microsoft.azure.datalake.store;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Hashtable;
-import java.util.Map;
 
 
 /**
@@ -23,18 +22,48 @@ public class QueryParams {
     String separator = "";
     String serializedString = null;
 
+    /**
+     * Creates an empty query parameter collection.
+     */
+    public QueryParams() {
+    }
+
+    /**
+     * Adds a name/value pair to the query string.
+     *
+     * @param name parameter name to include.
+     * @param value parameter value associated with the name.
+     */
     public void add(String name, String value) {
         params.put(name, value);
         serializedString = null;
     }
 
+    /**
+     * Sets the ADLS operation whose name should be included in the query string.
+     *
+     * @param op operation to encode.
+     */
     public void setOp(Operation op) {
         this.op = op;
         serializedString = null;
     }
 
-    public void setApiVersion(String apiVersion) { this.apiVersion = apiVersion; serializedString = null; }
+    /**
+     * Sets the API version that should be appended to the query string.
+     *
+     * @param apiVersion service API version identifier.
+     */
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
+        serializedString = null;
+    }
 
+    /**
+     * Serializes the configured parameters into a URL query string suitable for HTTP calls.
+     *
+     * @return serialized representation of the query parameters.
+     */
     public String serialize()  {
         if (serializedString == null) {
             StringBuilder sb = new StringBuilder();

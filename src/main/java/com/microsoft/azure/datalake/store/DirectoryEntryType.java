@@ -8,9 +8,11 @@ package com.microsoft.azure.datalake.store;
 
 
 /**
- * enum to indicate whether a directory entry is a file or a directory.
+ * Indicates whether a directory entry represents a file or a directory.
  */
 public enum DirectoryEntryType {
+    /** Entry represents a file. */
     FILE,
+    /** Entry represents a directory. */
     DIRECTORY
 }

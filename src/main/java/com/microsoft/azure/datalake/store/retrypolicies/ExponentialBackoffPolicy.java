@@ -23,26 +23,57 @@ public class ExponentialBackoffPolicy implements RetryPolicy {
     private int exponentialFactor = 4;
     private long lastAttemptStartTime = System.nanoTime();
 
+    /**
+     * Creates a policy using the default retry counts and intervals.
+     */
     public ExponentialBackoffPolicy() {
     }
 
     /**
+     * Creates a policy configured with a custom retry count and base backoff interval.
+     *
      * @param maxRetries maximum number of retries
-     * @param linearRetryInterval interval to use for linear retries (in milliseconds).
-     *                            Deprecated, not used in the retry policy.
      * @param exponentialRetryInterval (starting) interval to use for exponential backoff retries (in milliseconds)
      */
-    public ExponentialBackoffPolicy(int maxRetries, @Deprecated int linearRetryInterval, int exponentialRetryInterval) {
+    public ExponentialBackoffPolicy(int maxRetries, int exponentialRetryInterval) {
+        this(maxRetries, 0, exponentialRetryInterval);
+    }
+
+    /**
+     * Creates a policy configured with a custom retry count and interval while retaining a now-ignored linear retry parameter.
+     *
+     * @param maxRetries maximum number of retries.
+     * @param linearRetryInterval retained for backwards compatibility and ignored.
+     * @param exponentialRetryInterval (starting) interval to use for exponential backoff retries (in milliseconds).
+     */
+    public ExponentialBackoffPolicy(int maxRetries, int linearRetryInterval, int exponentialRetryInterval) {
+        if (linearRetryInterval < 0) {
+            throw new IllegalArgumentException("linearRetryInterval must be non-negative.");
+        }
         this.maxRetries = maxRetries;
         this.exponentialRetryInterval = exponentialRetryInterval;
     }
 
-    public ExponentialBackoffPolicy(int maxRetries, @Deprecated int linearRetryInterval, int exponentialRetryInterval, int exponentialFactor) {
-        this.maxRetries = maxRetries;
-        this.exponentialRetryInterval = exponentialRetryInterval;
+    /**
+     * Creates a policy with custom retry count, interval, and multiplicative factor applied after each attempt.
+     *
+     * @param maxRetries maximum number of retries.
+     * @param linearRetryInterval retained for backwards compatibility and ignored.
+     * @param exponentialRetryInterval (starting) interval to use for exponential backoff retries (in milliseconds).
+     * @param exponentialFactor multiplier applied to the retry interval after each retry.
+     */
+    public ExponentialBackoffPolicy(int maxRetries, int linearRetryInterval, int exponentialRetryInterval, int exponentialFactor) {
+        this(maxRetries, linearRetryInterval, exponentialRetryInterval);
         this.exponentialFactor = exponentialFactor;
     }
 
+    /**
+     * Determines whether another retry should be attempted for the supplied HTTP response code and exception.
+     *
+     * @param httpResponseCode HTTP status code received from the service.
+     * @param lastException exception thrown during the last attempt, if any.
+     * @return {@code true} when a retry should be attempted; otherwise {@code false}.
+     */
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
 
         // Non-retryable error

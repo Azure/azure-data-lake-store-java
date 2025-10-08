@@ -1,10 +1,6 @@
 package com.microsoft.azure.datalake.store;
 
 
-import com.microsoft.azure.datalake.store.ReadBuffer;
-import com.microsoft.azure.datalake.store.ReadBufferManager;
-import com.microsoft.azure.datalake.store.ReadBufferStatus;
-
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -16,10 +12,7 @@ import java.util.concurrent.CountDownLatch;
 class ReadBufferWorker implements Runnable {
 
     static final CountDownLatch unleashWorkers = new CountDownLatch(1);
-    private int id;
-
-    ReadBufferWorker(int id) {
-        this.id = id;
+    ReadBufferWorker() {
     }
 
     /**

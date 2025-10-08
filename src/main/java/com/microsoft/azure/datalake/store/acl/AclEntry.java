@@ -10,18 +10,12 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Contains one ACL entry. An ACL entry consists of a scope (access or default),
- * the type of the ACL (user, group, other or mask), the name of the user or group
- * associated with this ACL (can be blank to specify the default permissions for
- * users and groups, and must be blank for mask entries), and the action permitted
- * by this ACL entry.
- * <P>
- * An ACL for an object consists of a {@code List} of Acl entries.
- * </P>
+ * Represents a single ACL entry including scope, type, optional user or group name, and the
+ * permissions granted by that entry.
  * <p>
- * This class also provides a number of convenience methods for converting ACL entries
- * and ACLs to and back from strings.
- *  </P>
+ * Instances of this class can be converted to or created from POSIX-style ACL strings to simplify
+ * integration with command-line tooling and service APIs.
+ * </p>
  */
 public class AclEntry {
     /**
@@ -50,8 +44,10 @@ public class AclEntry {
      */
     public AclAction action;
 
+    /**
+     * Creates an empty ACL entry that can be populated programmatically before use.
+     */
     public AclEntry() {
-
     }
 
     /**

@@ -8,9 +8,11 @@ package com.microsoft.azure.datalake.store.acl;
 
 
 /**
- * The scope of an ACL Entry (access or default).
+ * Scope of an ACL entry, indicating whether permissions apply to the resource itself or to newly created children.
  */
 public enum AclScope {
+    /** Applies directly to the target resource. */
     ACCESS,
+    /** Applies to child resources created under the target directory. */
     DEFAULT
 }

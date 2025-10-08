@@ -6,10 +6,9 @@
 
 package com.contoso.liveservicetests;
 
+import com.azure.core.credential.TokenCredential;
 import com.contoso.helpers.HelperUtils;
 import com.microsoft.azure.datalake.store.*;
-import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
-import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
 
 import com.microsoft.azure.datalake.store.retrypolicies.NonIdempotentRetryPolicy;
 import org.junit.AfterClass;
@@ -32,7 +31,7 @@ public class TestCore {
 
     final UUID instanceGuid = UUID.randomUUID();
     static Properties prop = null;
-    static AzureADToken aadToken = null;
+    static TokenCredential credential = null;
     static String directory = null;
     static ADLStoreClient client = null;
     static boolean testsEnabled = true;
@@ -41,13 +40,14 @@ public class TestCore {
     @BeforeClass
     public static void setup() throws IOException {
         prop = HelperUtils.getProperties();
-        aadToken = AzureADAuthenticator.getTokenUsingClientCreds(prop.getProperty("OAuth2TokenUrl"),
-                                                                 prop.getProperty("ClientId"),
-                                                                 prop.getProperty("ClientSecret") );
-        UUID guid = UUID.randomUUID();
+        credential = HelperUtils.buildCredential(prop);
+        String storeAccount = prop.getProperty("StoreAcct");
+        if (storeAccount == null || storeAccount.trim().isEmpty()) {
+            Assume.assumeTrue("Skipping TestCore live tests", false);
+        }
         directory = "/" + prop.getProperty("dirName") + "/" + UUID.randomUUID();
-        String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
-        client = ADLStoreClient.createClient(account, aadToken);
+        String account = storeAccount + ".azuredatalakestore.net";
+        client = ADLStoreClient.createClient(account, credential);
         testsEnabled = Boolean.parseBoolean(prop.getProperty("CoreTestsEnabled", "true"));
     }
 
@@ -91,7 +91,6 @@ public class TestCore {
 
     @Test
     public void createEmptyFileWithConcurrentAppend() throws IOException {
-        Assume.assumeTrue(false);  // pending change to server behavior
         String filename = directory + "/" + "Core.createEmptyFileWithConcurrentAppend.txt";
         System.out.println("Running createEmptyFileWithConcurrentAppend");
 
@@ -109,14 +108,13 @@ public class TestCore {
         assertTrue("File type should be FILE", de.type == DirectoryEntryType.FILE);
         assertTrue("File length in DirectoryEntry should be 0 for null-content file", de.length == 0);
 
-        byte[] b = getFileContents(filename, contents.length * 2);
+        byte[] b = getFileContents(filename, 100);
         assertTrue("file length should be 0 for null content", b.length == 0);
     }
 
 
     @Test
     public void create0LengthFileWithConcurrentAppend() throws IOException {
-        Assume.assumeTrue(false);  // pending change to server behavior
         String filename = directory + "/" + "Core.create0LengthFileWithConcurrentAppend.txt";
         System.out.println("Running create0LengthFileWithConcurrentAppend");
 
@@ -234,7 +232,6 @@ public class TestCore {
 
     @Test
     public void create4MBFile() throws IOException {
-        Assume.assumeTrue(false);  // subsumed by TestFileSdk tests
         String filename = directory + "/" + "Core.Create4MBFile.txt";
         System.out.println("Running create4MBFile");
 
@@ -248,7 +245,6 @@ public class TestCore {
 
     @Test
     public void create5MBFile() throws IOException {
-        Assume.assumeTrue(false);  // subsumed by TestFileSdk tests
         String filename = directory + "/" + "Core.Create5MBFile.txt";
         System.out.println("Running create5MBFile");
 
@@ -315,11 +311,15 @@ public class TestCore {
             }
             if (!resp.successful) throw client.getExceptionFromResponse(resp, "Error reading from file " + filename);
             int bytesRead;
+            int countBeforeRead = count;
             while ((bytesRead = in.read(b, count, b.length - count)) != -1) {
                 count += bytesRead;
                 if (count >= b.length) break;
             }
             in.close();
+            if (count == countBeforeRead) {
+                eof = true;
+            }
         }
         byte[] b2 = Arrays.copyOfRange(b, 0, count);
         return b2;

@@ -6,11 +6,9 @@
 
 package com.contoso.liveservicetests;
 
+import com.azure.core.credential.TokenCredential;
 import com.contoso.helpers.HelperUtils;
 import com.microsoft.azure.datalake.store.*;
-
-import com.microsoft.azure.datalake.store.oauth2.AzureADAuthenticator;
-import com.microsoft.azure.datalake.store.oauth2.AzureADToken;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -22,7 +20,6 @@ import java.io.OutputStream;
 import java.util.*;
 
 public class TestPositionedReads {
-    private final UUID instanceGuid = UUID.randomUUID();
 
     private static String directory = null;
     private static ADLStoreClient client = null;
@@ -31,22 +28,24 @@ public class TestPositionedReads {
     @BeforeClass
     public static void setup() throws IOException {
         Properties prop;
-        AzureADToken aadToken;
 
         prop = HelperUtils.getProperties();
-        aadToken = AzureADAuthenticator.getTokenUsingClientCreds(prop.getProperty("OAuth2TokenUrl"),
-        prop.getProperty("ClientId"),
-        prop.getProperty("ClientSecret") );
-        UUID guid = UUID.randomUUID();
-        directory = "/" + prop.getProperty("dirName", "unitTests") + "/" + UUID.randomUUID();
-        String account = prop.getProperty("StoreAcct") + ".azuredatalakestore.net";
-        client = ADLStoreClient.createClient(account, aadToken);
         testsEnabled = Boolean.parseBoolean(prop.getProperty("PositionedReadsTestsEnabled", "true"));
+        String storeAccount = prop.getProperty("StoreAcct");
+        if (!testsEnabled || storeAccount == null || storeAccount.trim().isEmpty()) {
+            Assume.assumeTrue("Skipping TestPositionedReads live tests", false);
+        }
+        TokenCredential credential = HelperUtils.buildCredential(prop);
+        directory = "/" + prop.getProperty("dirName", "unitTests") + "/" + UUID.randomUUID();
+        String account = storeAccount + ".azuredatalakestore.net";
+        client = ADLStoreClient.createClient(account, credential);
     }
 
     @AfterClass
     public static void teardown() throws IOException {
-        client.deleteRecursive(directory);
+        if (client != null && directory != null) {
+            client.deleteRecursive(directory);
+        }
     }
 
     @Test
@@ -112,27 +111,5 @@ public class TestPositionedReads {
         } else {
             return true;
         }
-    }
-
-    @Test
-    public void resizeBuffer() throws IOException {
-        Assume.assumeTrue(false);
-        String filename = directory + "/" + "PositionedReads.resizeBuffer.txt";
-
-        OutputStream stream = client.createFile(filename, IfExists.OVERWRITE);
-        byte[] content = HelperUtils.getSampleText1();
-        stream.write(content);
-        stream.close();
-
-        ADLFileInputStream instr = client.getReadStream(filename);
-        byte[] b1 = new byte[200];
-        instr.read(b1);
-
-        instr.setBufferSize(87);
-        instr.read(b1);
-
-
-
-        assertTrue("This test needs to be finished", false);
     }
 }

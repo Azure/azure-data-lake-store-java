@@ -6,7 +6,6 @@
 
 package com.microsoft.azure.datalake.store;
 
-import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +27,6 @@ public class ADLFileOutputStream extends OutputStream {
 
     private final String filename;
     private final ADLStoreClient client;
-    private final boolean isCreate;
     private final String leaseId;
 
     private int blocksize = 4 * 1024 *1024;  // default buffer size of 4MB
@@ -46,7 +44,6 @@ public class ADLFileOutputStream extends OutputStream {
                         String leaseId) throws IOException {
         this.filename = filename;
         this.client = client;
-        this.isCreate = isCreate;
         this.leaseId = (leaseId == null)? UUID.randomUUID().toString() : leaseId;
 
         if (!isCreate) initializeAppendStream();

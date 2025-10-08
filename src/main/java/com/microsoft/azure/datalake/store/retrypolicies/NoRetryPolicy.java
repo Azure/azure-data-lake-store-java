@@ -21,6 +21,19 @@ public class NoRetryPolicy implements RetryPolicy {
     private int waitInterval = 100;
 
 
+    /**
+     * Creates a retry policy that retries at most once for an initial 401 response.
+     */
+    public NoRetryPolicy() {
+    }
+
+    /**
+     * Determines whether another retry should be attempted for the supplied HTTP response code and exception.
+     *
+     * @param httpResponseCode HTTP status code received from the service.
+     * @param lastException exception thrown during the last attempt, if any.
+     * @return {@code true} when a retry should be attempted; otherwise {@code false}.
+     */
     public boolean shouldRetry(int httpResponseCode, Exception lastException) {
         if (httpResponseCode == 401 && retryCount == 0) {
             // to mitigate a special problem with intermittent 401's on calls

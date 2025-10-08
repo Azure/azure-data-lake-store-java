@@ -17,6 +17,12 @@ import java.io.InputStream;
  */
 public class OperationResponse {
     /**
+     * Creates a response container with default values indicating a successful call.
+     */
+    public OperationResponse() {
+    }
+
+    /**
      * whether the request was successful. Callers should always check for success before using any return value from
      * any of the calls.
      */
