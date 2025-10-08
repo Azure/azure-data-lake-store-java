@@ -3,6 +3,9 @@
 1. Replaced custom OAuth2 implementation with Azure Identity `TokenCredential` support.
 2. Updated `ADLStoreClient` factory methods to accept Azure Identity credentials and added dependency on `com.azure:azure-identity` 1.17.0.
 3. Updated live service tests to authenticate with `DefaultAzureCredential`.
+4. Removed the deprecated `oauth2` module now that Azure Identity is the sole authentication mechanism.
+5. Added an API to override the `TokenRequestContext` used for Azure Identity token acquisition with a default scope of `https://datalake.azure.net/.default`.
+6. Simplified static access token handling to rely on caller-managed expiry.
 
 ### Version 2.3.10
 1. Update log4j to mitigate CVE-2021-44228. Also update junit.

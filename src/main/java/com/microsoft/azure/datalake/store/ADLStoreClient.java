@@ -39,8 +39,9 @@ public class ADLStoreClient {
 
     private final String accountFQDN;
     private final TokenCredential tokenCredential;
-    private final StaticTokenCredential staticTokenCredential;
+    private volatile String staticAccessToken;
     private AccessToken cachedAccessToken;
+    private volatile TokenRequestContext tokenRequestContextOverride;
     private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store"); // package-default logging policy
     private static final AtomicLong clientIdCounter = new AtomicLong(0);
     private final long clientId;
@@ -109,10 +110,17 @@ public class ADLStoreClient {
 
 
     // private constructor, references should be obtained using the createClient factory method
-    private ADLStoreClient(String accountFQDN, TokenCredential tokenCredential, StaticTokenCredential staticTokenCredential, long clientId) {
+    private ADLStoreClient(String accountFQDN, TokenCredential tokenCredential, String staticAccessToken, long clientId) {
+        if ((tokenCredential == null) == (staticAccessToken == null)) {
+            throw new IllegalArgumentException("Either tokenCredential or accessToken must be provided, but not both");
+        }
+        if (staticAccessToken != null && staticAccessToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("accessToken cannot be empty");
+        }
         this.accountFQDN = accountFQDN;
-        this.tokenCredential = Objects.requireNonNull(tokenCredential, "tokenCredential cannot be null");
-        this.staticTokenCredential = staticTokenCredential;
+        this.tokenCredential = tokenCredential;
+        this.staticAccessToken = staticAccessToken;
+        this.cachedAccessToken = null;
         this.clientId = clientId;
         this.userAgentString = userAgent;
     }
@@ -149,13 +157,12 @@ public class ADLStoreClient {
         if (accountFQDN == null || accountFQDN.trim().equals("")) {
             throw new IllegalArgumentException("account name is required");
         }
-        if (accessToken == null || accessToken.equals("")) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
             throw new IllegalArgumentException("token is required");
         }
         long clientId =  clientIdCounter.incrementAndGet();
         log.trace("ADLStoreClient {} created for {} using SDK version {}", clientId, accountFQDN, sdkVersion);
-        StaticTokenCredential credential = new StaticTokenCredential(accessToken);
-        return new ADLStoreClient(accountFQDN, credential, credential, clientId);
+        return new ADLStoreClient(accountFQDN, null, accessToken, clientId);
     }
 
     ExponentialBackoffPolicy makeExponentialBackoffPolicy() {
@@ -1009,6 +1016,18 @@ public class ADLStoreClient {
         this.enableConditionalCreate = o.shouldEnableConditionalCreate();
     }
 
+    /**
+     * Overrides the {@link TokenRequestContext} used when acquiring tokens from {@link TokenCredential}.
+     *
+     * @param tokenRequestContext context to use for token acquisition
+     */
+    public synchronized void setTokenRequestContext(TokenRequestContext tokenRequestContext) {
+        if (tokenRequestContext == null) {
+            throw new IllegalArgumentException("tokenRequestContext cannot be null");
+        }
+        this.tokenRequestContextOverride = cloneTokenRequestContext(tokenRequestContext);
+    }
+
 
     /**
      * update token on existing client.
@@ -1030,12 +1049,15 @@ public class ADLStoreClient {
      * @param accessToken The AAD Token string
      */
     public synchronized void updateToken(String accessToken) {
-        if (this.staticTokenCredential == null) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("token is required");
+        }
+        if (this.staticAccessToken == null) {
             throw new UnsupportedOperationException("updateToken is only supported when the client was created with a static access token");
         }
         log.trace("AAD Token Updated for client client {} for account {}", clientId, accountFQDN);
-        this.staticTokenCredential.setToken(accessToken);
-        this.cachedAccessToken = this.staticTokenCredential.getCurrentToken();
+        this.staticAccessToken = accessToken;
+        this.cachedAccessToken = null;
     }
 
     /* ----------------------------------------------------------------------------------------------------------*/
@@ -1057,6 +1079,9 @@ public class ADLStoreClient {
      * @throws IOException thrown if a token provider is being used and the token provider has problem getting token
      */
     synchronized String getAccessToken() throws IOException {
+        if (staticAccessToken != null) {
+            return "Bearer " + staticAccessToken;
+        }
         boolean needsRefresh = cachedAccessToken == null || shouldRefreshAccessToken(cachedAccessToken);
         if (needsRefresh) {
             OffsetDateTime previousExpiry = cachedAccessToken == null ? null : cachedAccessToken.getExpiresAt();
@@ -1248,9 +1273,11 @@ public class ADLStoreClient {
             }
 
     private synchronized AccessToken acquireAccessToken() throws IOException {
-        try {
+        try 
+        {
             log.debug("Client {} requesting token from credential", clientId);
-            AccessToken token = tokenCredential.getTokenSync(createTokenRequestContext());
+            AccessToken token = Objects.requireNonNull(tokenCredential, "tokenCredential is required for dynamic token acquisition")
+                    .getTokenSync(createTokenRequestContext());
             if (token == null || token.getToken() == null || token.getToken().isEmpty()) {
                 throw new IOException("TokenCredential returned an empty access token");
             }
@@ -1278,40 +1305,27 @@ public class ADLStoreClient {
     }
 
     private TokenRequestContext createTokenRequestContext() {
+        TokenRequestContext override = this.tokenRequestContextOverride;
+        if (override != null) {
+            return cloneTokenRequestContext(override);
+        }
         TokenRequestContext context = new TokenRequestContext();
         context.addScopes(DATA_LAKE_SCOPE);
         return context;
     }
 
-    private static final class StaticTokenCredential implements TokenCredential {
-        private static final Duration STATIC_TOKEN_EXPIRY = Duration.ofDays(3650);
-        private volatile AccessToken token;
-
-        private StaticTokenCredential(String accessToken) {
-            setToken(accessToken);
+    private static TokenRequestContext cloneTokenRequestContext(TokenRequestContext source) {
+        TokenRequestContext copy = new TokenRequestContext();
+        if (source.getScopes() != null && !source.getScopes().isEmpty()) {
+            copy.addScopes(source.getScopes().toArray(new String[0]));
         }
-
-        @Override
-        public reactor.core.publisher.Mono<AccessToken> getToken(TokenRequestContext request) {
-            AccessToken current = token;
-            if (current == null) {
-                return reactor.core.publisher.Mono.error(new IllegalStateException("Access token not initialized"));
-            }
-            return reactor.core.publisher.Mono.just(current);
+        if (source.getClaims() != null && !source.getClaims().isEmpty()) {
+            copy.setClaims(source.getClaims());
         }
-
-        private synchronized void setToken(String accessToken) {
-            if (accessToken == null || accessToken.trim().isEmpty()) {
-                throw new IllegalArgumentException("accessToken is required");
-            }
-            OffsetDateTime expires = OffsetDateTime.now(ZoneOffset.UTC).plus(STATIC_TOKEN_EXPIRY);
-            this.token = new AccessToken(accessToken, expires);
+        if (source.getTenantId() != null && !source.getTenantId().isEmpty()) {
+            copy.setTenantId(source.getTenantId());
         }
-
-        private AccessToken getCurrentToken() {
-            return token;
-        }
+        return copy;
     }
-
 
 }
